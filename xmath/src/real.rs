@@ -1,0 +1,36 @@
+use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
+
+pub trait Real:
+    Copy
+    + Clone
+    + RealConstants
+    + Neg<Output = Self>
+    + Add<Output = Self>
+    + Sub<Output = Self>
+    + Mul<Output = Self>
+    + Div<Output = Self>
+    + AddAssign
+    + SubAssign
+    + MulAssign
+    + DivAssign
+    + Ord
+    + PartialOrd
+{
+    fn is_valid(&self) -> bool;
+
+    fn sqrt(&self) -> Self;
+
+    fn abs(&self) -> Self;
+}
+
+pub trait RealConstants {
+    fn zero() -> Self;
+
+    fn one() -> Self;
+
+    fn epsilon() -> Self;
+
+    fn half() -> Self;
+
+    fn en1() -> Self;
+}
