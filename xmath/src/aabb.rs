@@ -7,6 +7,13 @@ pub struct AABB<T> {
 }
 
 impl<T: Real> AABB<T> {
+    pub fn new(lower_bound: Vec2<T>, upper_bound: Vec2<T>) -> AABB<T> {
+        AABB {
+            lower_bound,
+            upper_bound,
+        }
+    }
+
     pub fn is_valid(&self) -> bool {
         let d = self.upper_bound - self.lower_bound;
         self.lower_bound.is_valid()
@@ -20,7 +27,7 @@ impl<T: Real> AABB<T> {
     }
 
     pub fn extents(&self) -> Vec2<T> {
-        (self.lower_bound - self.upper_bound) * T::half()
+        (self.upper_bound - self.lower_bound) * T::half()
     }
 
     pub fn perimeter(&self) -> T {

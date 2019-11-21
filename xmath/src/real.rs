@@ -13,7 +13,6 @@ pub trait Real:
     + SubAssign
     + MulAssign
     + DivAssign
-    + Ord
     + PartialOrd
 {
     fn is_valid(&self) -> bool;
@@ -21,6 +20,10 @@ pub trait Real:
     fn sqrt(&self) -> Self;
 
     fn abs(&self) -> Self;
+
+    fn max(&self, other: Self) -> Self;
+
+    fn min(&self, other: Self) -> Self;
 }
 
 pub trait RealConstants {

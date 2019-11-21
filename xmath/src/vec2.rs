@@ -64,6 +64,12 @@ impl<T: Real> Vec2<T> {
     pub fn abs(&self) -> Vec2<T> {
         Vec2::new(self.x.abs(), self.y.abs())
     }
+
+    pub fn dot(&self, rhs: &Vec2<T>) -> T {
+        let a = self;
+        let b = rhs;
+        a.x * b.x + a.y * b.y
+    }
 }
 
 impl<T: Real> Neg for Vec2<T> {

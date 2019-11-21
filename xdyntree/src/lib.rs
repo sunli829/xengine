@@ -140,7 +140,7 @@ impl<T: Real, D> Tree<T, D> {
         let leaf_aabb = self.nodes[leaf].aabb;
         let mut index = self.root.unwrap();
 
-        while self.nodes[index].is_leaf() {
+        while !self.nodes[index].is_leaf() {
             let index_node = &self.nodes[index];
             let child1 = index_node.child1.unwrap();
             let child2 = index_node.child2.unwrap();
@@ -222,7 +222,7 @@ impl<T: Real, D> Tree<T, D> {
         }
     }
 
-    pub fn create_proxy(&mut self, aabb: AABB<T>, data: D) {
+    pub fn create_proxy(&mut self, aabb: AABB<T>, data: D) -> usize {
         let id = self.allocate_node(
             AABB {
                 lower_bound: aabb.lower_bound - T::en1(),
@@ -232,6 +232,7 @@ impl<T: Real, D> Tree<T, D> {
             0,
         );
         self.insert_leaf(id);
+        id
     }
 
     fn remove_leaf(&mut self, leaf: usize) {
@@ -327,13 +328,13 @@ impl<T: Real, D> Tree<T, D> {
         }
     }
 
-    pub fn ray_cast(&self, p1: Vec2<T>, p2: Vec2<T>) {
+    pub fn ray_cast(&self, p1: Vec2<T>, p2: Vec2<T>) -> RayCastIter<T, D> {
         let mut r = p2 - p1;
         assert!(r.length_squared() > T::zero());
         r.normalize();
 
         let v = T::one().cross(r);
-        let abs_v = v.abs();
+        let v_abs = v.abs();
 
         let segment_aabb = {
             let t = p1 + (p2 - p1);
@@ -342,6 +343,20 @@ impl<T: Real, D> Tree<T, D> {
                 upper_bound: p1.max(t),
             }
         };
+
+        let mut stack = Vec::with_capacity(QUERY_STACK_INIT_SIZE);
+        if let Some(root) = self.root {
+            stack.push(root);
+        }
+
+        RayCastIter {
+            tree: self,
+            stack,
+            segment_aabb,
+            v,
+            v_abs,
+            p1,
+        }
     }
 }
 
@@ -371,5 +386,59 @@ impl<'a, T: Real, D> Iterator for QueryIter<'a, T, D> {
             }
         }
         None
+    }
+}
+
+pub struct RayCastIter<'a, T, D> {
+    tree: &'a Tree<T, D>,
+    stack: Vec<usize>,
+    segment_aabb: AABB<T>,
+    v: Vec2<T>,
+    v_abs: Vec2<T>,
+    p1: Vec2<T>,
+}
+
+impl<'a, T: Real, D> Iterator for RayCastIter<'a, T, D> {
+    type Item = (usize, &'a AABB<T>, &'a D);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        while let Some(idx) = self.stack.pop() {
+            let node = &self.tree.nodes[idx];
+
+            if !node.aabb.is_overlap(&self.segment_aabb) {
+                continue;
+            }
+
+            let c = node.aabb.center();
+            let h = node.aabb.extents();
+            let separation = self.v.dot(&(self.p1 - c)).abs() - self.v_abs.dot(&h);
+            if separation > T::zero() {
+                continue;
+            }
+
+            if node.is_leaf() {
+                return Some((idx, &node.aabb, node.data.as_ref().unwrap()));
+            }
+
+            if let Some(child1) = node.child1 {
+                self.stack.push(child1);
+            }
+            if let Some(child2) = node.child2 {
+                self.stack.push(child2);
+            }
+        }
+        None
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::*;
+
+    #[test]
+    fn test() {
+        let mut tree = Tree::new();
+        tree.create_proxy(AABB::new(Vec2::new(1.0, 1.0), Vec2::new(10.0, 10.0)), ());
+        tree.create_proxy(AABB::new(Vec2::new(11.0, 11.0), Vec2::new(10.0, 10.0)), ());
     }
 }
