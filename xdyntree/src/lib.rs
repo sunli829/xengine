@@ -339,7 +339,7 @@ impl<T: Real, D> Tree<T, D> {
         }
     }
 
-    pub fn ray_cast(&self, p1: Vec2<T>, p2: Vec2<T>) -> RayCastIter<T, D> {
+    pub fn ray_cast(&self, p1: Vec2<T>, p2: Vec2<T>, max_fraction: T) -> RayCastIter<T, D> {
         let mut r = p2 - p1;
         assert!(r.length_squared() > T::zero());
         r.normalize();
@@ -348,7 +348,7 @@ impl<T: Real, D> Tree<T, D> {
         let v_abs = v.abs();
 
         let segment_aabb = {
-            let t = p1 + (p2 - p1);
+            let t = p1 + (p2 - p1) * max_fraction;
             AABB {
                 lower_bound: p1.min(t),
                 upper_bound: p1.max(t),
@@ -367,6 +367,7 @@ impl<T: Real, D> Tree<T, D> {
             v,
             v_abs,
             p1,
+            p2,
         }
     }
 }
@@ -402,6 +403,15 @@ pub struct RayCastIter<'a, T, D> {
     v: Vec2<T>,
     v_abs: Vec2<T>,
     p1: Vec2<T>,
+    p2: Vec2<T>,
+}
+
+impl<'a, T: Real, D> RayCastIter<'a, T, D> {
+    pub fn set_max_fraction(&mut self, value: T) {
+        let t = self.p1 + (self.p2 - self.p1) * value;
+        self.segment_aabb.lower_bound = self.p1.min(t);
+        self.segment_aabb.upper_bound = self.p1.max(t);
+    }
 }
 
 impl<'a, T: Real, D> Iterator for RayCastIter<'a, T, D> {
