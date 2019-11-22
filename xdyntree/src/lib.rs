@@ -455,9 +455,5 @@ mod tests {
         dbg!(tree.create_proxy(AABB::new(Vec2::new(-5.0, -5.0), Vec2::new(-2.0, -2.0)), (),));
         dbg!(tree.create_proxy(AABB::new(Vec2::new(-5.0, -5.0), Vec2::new(-2.0, -2.0)), (),));
         dbg!(tree.create_proxy(AABB::new(Vec2::new(-5.0, -5.0), Vec2::new(-2.0, -2.0)), (),));
-
-        for item in tree.query(AABB::new(Vec2::new(-5.0, -5.0), Vec2::new(0.0, 0.0))) {
-            println!("{:?}", item.0);
-        }
     }
 }
