@@ -11,11 +11,32 @@ pub struct Sweep<T> {
 }
 
 impl<T: Real> Sweep<T> {
-    pub fn transform(&self, beta: T) -> Transform<T> {
+    pub fn get_transform(&self, beta: T) -> Transform<T> {
         let mut p = self.c0 * (T::one() - beta) + self.c * beta;
         let angle = (T::one() - beta) * self.a0 + beta * self.a;
         let q = Rotation::new(angle);
         p -= q.multiply(self.local_center);
         Transform { p, q }
+    }
+
+    pub fn advance(&mut self, alpha: T) {
+        let beta = (alpha - self.alpha0) / (T::one() - self.alpha0);
+        self.c0 += (self.c - self.c0) * beta;
+        self.a0 += (self.a - self.a0) * beta;
+        self.alpha0 = alpha;
+    }
+
+    pub fn normalize(&self) -> Sweep<T> {
+        let d = T::pi_times_2() * (self.a0 / T::pi_times_2());
+        let a0 = self.a0 - d;
+        let a = self.a - d;
+        Sweep {
+            local_center: self.local_center,
+            c0: self.c0,
+            c: self.c,
+            a0,
+            a,
+            alpha0: self.alpha0,
+        }
     }
 }

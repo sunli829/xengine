@@ -91,6 +91,10 @@ impl RealConstants for f32 {
         1.0
     }
 
+    fn two() -> Self {
+        2.0
+    }
+
     fn ten() -> Self {
         10.0
     }

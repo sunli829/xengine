@@ -75,7 +75,7 @@ impl<T: Real> Shape<T> for Circle<T> {
         MassData { mass, center, i }
     }
 
-    fn distance_proxy(&self, index: usize) -> DistanceProxy<'_, T> {
+    fn distance_proxy(&self, _index: usize) -> DistanceProxy<'_, T> {
         DistanceProxy {
             vertices: Cow::Borrowed(std::slice::from_ref(&self.position)),
             radius: self.radius,

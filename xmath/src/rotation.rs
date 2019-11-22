@@ -1,5 +1,4 @@
 use crate::{Multiply, Real, TransposeMultiply, Vector2};
-use std::ops::Mul;
 
 #[derive(Debug, Copy, Clone)]
 pub struct Rotation<T> {

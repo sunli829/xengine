@@ -6,6 +6,7 @@ pub trait Real:
     + Copy
     + Clone
     + ToOwned
+    + Default
     + RealConstants
     + RealConverter
     + Neg<Output = Self>
@@ -80,6 +81,8 @@ pub trait RealConstants {
     fn ten() -> Self;
 
     fn half() -> Self;
+
+    fn two() -> Self;
 
     fn zero() -> Self;
 

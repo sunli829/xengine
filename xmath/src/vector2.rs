@@ -2,7 +2,7 @@ use crate::real::Real;
 use crate::{CrossTrait, DotTrait};
 use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Default)]
 pub struct Vector2<T> {
     pub x: T,
     pub y: T,
@@ -28,7 +28,7 @@ impl<T: Real> Vector2<T> {
         self.x * self.x + self.y * self.y
     }
 
-    pub fn normalize(&mut self) -> Vector2<T> {
+    pub fn normalize(&self) -> Vector2<T> {
         let len = self.length();
         if len >= T::epsilon() {
             let inv_length = T::one() / len;
@@ -68,6 +68,15 @@ impl<T: Real> Vector2<T> {
 
     pub fn abs(&self) -> Vector2<T> {
         Vector2::new(self.x.abs(), self.y.abs())
+    }
+
+    pub fn distance(&self, other: &Vector2<T>) -> T {
+        (*self - *other).length()
+    }
+
+    pub fn distance_squared(&self, other: &Vector2<T>) -> T {
+        let c = *self - *other;
+        c.dot(c)
     }
 }
 

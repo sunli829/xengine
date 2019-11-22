@@ -18,6 +18,7 @@ const NUM_BITS: usize = 64;
 const FRACTIONAL_PLACES: usize = 32;
 const MIN_POSITIVE_VALUE: i64 = 1;
 const ONE: i64 = 1i64 << FRACTIONAL_PLACES;
+const TWO: i64 = 2i64 << FRACTIONAL_PLACES;
 const TEN: i64 = 10i64 << FRACTIONAL_PLACES;
 const HALF: i64 = 1i64 << (FRACTIONAL_PLACES - 1);
 const PI_TIMES_2: i64 = 0x6487ED511;
@@ -36,6 +37,7 @@ pub mod consts {
     pub const MIN_VALUE: FP = FP(super::MAX_VALUE - 1);
     pub const MIN_POSITIVE_VALUE: FP = FP(super::MIN_POSITIVE_VALUE);
     pub const ONE: FP = FP(super::ONE);
+    pub const TWO: FP = FP(super::TWO);
     pub const TEN: FP = FP(super::TEN);
     pub const HALF: FP = FP(super::HALF);
     pub const ZERO: FP = FP(0);
@@ -612,6 +614,10 @@ impl RealConstants for FP {
 
     fn half() -> Self {
         consts::HALF
+    }
+
+    fn two() -> Self {
+        consts::TWO
     }
 
     fn zero() -> Self {

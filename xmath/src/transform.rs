@@ -42,8 +42,8 @@ impl<T: Real> TransposeMultiply<Vector2<T>> for Transform<T> {
         let v = rhs;
         let px = v.x - t.p.x;
         let py = v.y - t.p.y;
-        let x = (t.q.c * px + t.q.s * py);
-        let y = (-t.q.s * px + t.q.c * py);
+        let x = t.q.c * px + t.q.s * py;
+        let y = -t.q.s * px + t.q.c * py;
         Vector2 { x, y }
     }
 }
@@ -68,7 +68,7 @@ impl<T: Real> TransposeMultiply<Transform<T>> for Transform<T> {
         let a = self;
         let b = rhs;
         Transform {
-            p: a.q.multiply((b.p - a.p)),
+            p: a.q.multiply(b.p - a.p),
             q: a.q.multiply(b.q),
         }
     }

@@ -24,7 +24,7 @@ impl<T: Real> Shape<T> for Edge<T> {
         1
     }
 
-    fn test_point(&self, xf: &Transform<T>, p: &Vector2<T>) -> bool {
+    fn test_point(&self, _xf: &Transform<T>, _p: &Vector2<T>) -> bool {
         false
     }
 
@@ -32,7 +32,7 @@ impl<T: Real> Shape<T> for Edge<T> {
         &self,
         input: &RayCastInput<T>,
         xf: &Transform<T>,
-        child_index: usize,
+        _child_index: usize,
     ) -> Option<RayCastOutput<T>> {
         let p1 = xf.q.transpose_multiply(input.p1 - xf.p);
         let p2 = xf.q.transpose_multiply(input.p2 - xf.p);
@@ -100,7 +100,7 @@ impl<T: Real> Shape<T> for Edge<T> {
         }
     }
 
-    fn distance_proxy(&self, index: usize) -> DistanceProxy<'_, T> {
+    fn distance_proxy(&self, _index: usize) -> DistanceProxy<'_, T> {
         DistanceProxy {
             vertices: Cow::Borrowed(unsafe {
                 std::slice::from_raw_parts(&self.vertex1 as *const Vector2<T>, 2)
