@@ -89,7 +89,7 @@ impl<T: Real> Add for Vec2<T> {
     fn add(self, rhs: Self) -> Self::Output {
         Vec2 {
             x: self.x + rhs.x,
-            y: self.y + rhs.x,
+            y: self.y + rhs.y,
         }
     }
 }
@@ -125,7 +125,7 @@ impl<T: Real> Sub for Vec2<T> {
     fn sub(self, rhs: Self) -> Self::Output {
         Vec2 {
             x: self.x - rhs.x,
-            y: self.y - rhs.x,
+            y: self.y - rhs.y,
         }
     }
 }

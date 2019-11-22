@@ -49,8 +49,8 @@ impl<T: Real, D> Tree<T, D> {
 
         let b = self.nodes[a].child1.unwrap();
         let c = self.nodes[a].child2.unwrap();
-
         let balance = self.nodes[c].height - self.nodes[b].height;
+
         if balance > 1 {
             let f = self.nodes[c].child1.unwrap();
             let g = self.nodes[c].child2.unwrap();
@@ -73,16 +73,22 @@ impl<T: Real, D> Tree<T, D> {
                 self.nodes[c].child2 = Some(f);
                 self.nodes[a].child2 = Some(g);
                 self.nodes[g].link = Some(a);
+
                 self.nodes[a].aabb = self.nodes[b].aabb.combine(&self.nodes[g].aabb);
                 self.nodes[c].aabb = self.nodes[a].aabb.combine(&self.nodes[f].aabb);
+
                 self.nodes[a].height = 1 + self.nodes[b].height.max(self.nodes[g].height);
                 self.nodes[c].height = 1 + self.nodes[a].height.max(self.nodes[f].height);
             } else {
                 self.nodes[c].child2 = Some(g);
                 self.nodes[a].child2 = Some(f);
                 self.nodes[f].link = Some(a);
+
                 self.nodes[a].aabb = self.nodes[b].aabb.combine(&self.nodes[f].aabb);
                 self.nodes[c].aabb = self.nodes[a].aabb.combine(&self.nodes[g].aabb);
+
+                self.nodes[a].height = 1 + self.nodes[b].height.max(self.nodes[f].height);
+                self.nodes[c].height = 1 + self.nodes[a].height.max(self.nodes[g].height);
             }
 
             return c;
@@ -110,6 +116,7 @@ impl<T: Real, D> Tree<T, D> {
                 self.nodes[b].child2 = Some(d);
                 self.nodes[a].child1 = Some(e);
                 self.nodes[e].link = Some(a);
+
                 self.nodes[a].aabb = self.nodes[c].aabb.combine(&self.nodes[e].aabb);
                 self.nodes[b].aabb = self.nodes[a].aabb.combine(&self.nodes[d].aabb);
 
@@ -119,6 +126,9 @@ impl<T: Real, D> Tree<T, D> {
                 self.nodes[b].child2 = Some(e);
                 self.nodes[a].child1 = Some(d);
                 self.nodes[d].link = Some(a);
+
+                self.nodes[a].aabb = self.nodes[c].aabb.combine(&self.nodes[d].aabb);
+                self.nodes[b].aabb = self.nodes[a].aabb.combine(&self.nodes[e].aabb);
 
                 self.nodes[a].height = 1 + self.nodes[c].height.max(self.nodes[d].height);
                 self.nodes[b].height = 1 + self.nodes[a].height.max(self.nodes[e].height);
@@ -186,6 +196,7 @@ impl<T: Real, D> Tree<T, D> {
         let sibling_height = sibling_node.height;
         let new_parent =
             self.allocate_node(leaf_aabb.combine(&sibling_aabb), None, sibling_height + 1);
+        self.nodes[new_parent].link = old_parent;
 
         if let Some(old_parent) = old_parent {
             let old_parent_node = &mut self.nodes[old_parent];
@@ -376,13 +387,8 @@ impl<'a, T: Real, D> Iterator for QueryIter<'a, T, D> {
                 if node.is_leaf() {
                     return Some((idx, &node.aabb, node.data.as_ref().unwrap()));
                 }
-            } else {
-                if let Some(child1) = node.child1 {
-                    self.stack.push(child1);
-                }
-                if let Some(child2) = node.child2 {
-                    self.stack.push(child2);
-                }
+                self.stack.push(node.child1.unwrap());
+                self.stack.push(node.child2.unwrap());
             }
         }
         None
@@ -420,12 +426,8 @@ impl<'a, T: Real, D> Iterator for RayCastIter<'a, T, D> {
                 return Some((idx, &node.aabb, node.data.as_ref().unwrap()));
             }
 
-            if let Some(child1) = node.child1 {
-                self.stack.push(child1);
-            }
-            if let Some(child2) = node.child2 {
-                self.stack.push(child2);
-            }
+            self.stack.push(node.child1.unwrap());
+            self.stack.push(node.child2.unwrap());
         }
         None
     }
@@ -438,7 +440,24 @@ mod tests {
     #[test]
     fn test() {
         let mut tree = Tree::new();
-        tree.create_proxy(AABB::new(Vec2::new(1.0, 1.0), Vec2::new(10.0, 10.0)), ());
-        tree.create_proxy(AABB::new(Vec2::new(11.0, 11.0), Vec2::new(10.0, 10.0)), ());
+        dbg!(tree.create_proxy(AABB::new(Vec2::new(1.0, 1.0), Vec2::new(10.0, 10.0)), ()));
+        dbg!(tree.create_proxy(
+            AABB::new(Vec2::new(-21.0, -21.0), Vec2::new(20.0, 20.0)),
+            (),
+        ));
+        dbg!(tree.create_proxy(
+            AABB::new(Vec2::new(-11.0, -11.0), Vec2::new(50.0, 50.0)),
+            (),
+        ));
+        dbg!(tree.create_proxy(AABB::new(Vec2::new(-5.0, -5.0), Vec2::new(-2.0, -2.0)), (),));
+        dbg!(tree.create_proxy(AABB::new(Vec2::new(-5.0, -5.0), Vec2::new(-2.0, -2.0)), (),));
+        dbg!(tree.create_proxy(AABB::new(Vec2::new(-5.0, -5.0), Vec2::new(-2.0, -2.0)), (),));
+        dbg!(tree.create_proxy(AABB::new(Vec2::new(-5.0, -5.0), Vec2::new(-2.0, -2.0)), (),));
+        dbg!(tree.create_proxy(AABB::new(Vec2::new(-5.0, -5.0), Vec2::new(-2.0, -2.0)), (),));
+        dbg!(tree.create_proxy(AABB::new(Vec2::new(-5.0, -5.0), Vec2::new(-2.0, -2.0)), (),));
+
+        for item in tree.query(AABB::new(Vec2::new(-5.0, -5.0), Vec2::new(0.0, 0.0))) {
+            println!("{:?}", item.0);
+        }
     }
 }

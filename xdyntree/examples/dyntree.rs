@@ -31,6 +31,7 @@ fn main() {
             upper_bound: Vec2::new(x + w, y + h),
         };
         let id = tree.create_proxy(bounds, ());
+        println!("insert {}:{:?}", id, bounds);
         rects.push((id, bounds));
     }
 
@@ -81,13 +82,13 @@ fn main() {
                     // 鼠标左键松开
                     if let Some(sr) = select_rect {
                         selected.clear();
-                        selected.extend(
-                            tree.query(AABB {
-                                lower_bound: Vec2::new(sr.min.x, sr.min.y),
-                                upper_bound: Vec2::new(sr.right_bottom().x, sr.right_bottom().y),
-                            })
-                            .map(|item| item.0),
-                        );
+                        let aabb = AABB {
+                            lower_bound: Vec2::new(sr.min.x, sr.min.y),
+                            upper_bound: Vec2::new(sr.max.x, sr.max.y),
+                        };
+                        println!("query: {:?}", aabb);
+                        selected.extend(tree.query(aabb).map(|item| item.0));
+                        println!("query result: {:?}", selected);
                         windowed_context.window().request_redraw();
                     }
 
