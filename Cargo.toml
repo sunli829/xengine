@@ -3,5 +3,5 @@ members = [
     "xecs",
     "xmath",
     "xfixedpoint",
-    "xdyntree"
+    "xphysics"
 ]

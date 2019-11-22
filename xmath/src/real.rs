@@ -5,6 +5,7 @@ pub trait Real:
     Debug
     + Copy
     + Clone
+    + ToOwned
     + RealConstants
     + RealConverter
     + Neg<Output = Self>

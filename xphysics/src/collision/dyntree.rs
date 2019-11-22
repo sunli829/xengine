@@ -1,5 +1,6 @@
+use crate::{settings, RayCastInput};
 use slab::Slab;
-use xmath::{CrossTrait, Real, Vec2, AABB};
+use xmath::{CrossTrait, DotTrait, Real, Vector2, AABB};
 
 const QUERY_STACK_INIT_SIZE: usize = 256;
 
@@ -236,8 +237,8 @@ impl<T: Real, D> Tree<T, D> {
     pub fn create_proxy(&mut self, aabb: AABB<T>, data: D) -> usize {
         let id = self.allocate_node(
             AABB {
-                lower_bound: aabb.lower_bound - T::en1(),
-                upper_bound: aabb.upper_bound + T::en1(),
+                lower_bound: aabb.lower_bound - settings::aabb_extension::<T>(),
+                upper_bound: aabb.upper_bound + settings::aabb_extension::<T>(),
             },
             Some(data),
             0,
@@ -293,7 +294,7 @@ impl<T: Real, D> Tree<T, D> {
         self.nodes.remove(id);
     }
 
-    pub fn move_proxy(&mut self, id: usize, aabb: AABB<T>, displacement: Vec2<T>) -> bool {
+    pub fn move_proxy(&mut self, id: usize, aabb: AABB<T>, displacement: Vector2<T>) -> bool {
         if self.nodes[id].aabb.contains(&aabb) {
             return false;
         }
@@ -301,10 +302,10 @@ impl<T: Real, D> Tree<T, D> {
         self.remove_leaf(id);
 
         let mut b = AABB {
-            lower_bound: aabb.lower_bound - T::en1(),
-            upper_bound: aabb.lower_bound + T::en1(),
+            lower_bound: aabb.lower_bound - settings::aabb_extension::<T>(),
+            upper_bound: aabb.lower_bound + settings::aabb_extension::<T>(),
         };
-        let d = displacement * T::en1();
+        let d = displacement * settings::aabb_multiplier::<T>();
 
         if d.x < T::zero() {
             b.lower_bound.x += d.x;
@@ -339,8 +340,8 @@ impl<T: Real, D> Tree<T, D> {
         }
     }
 
-    pub fn ray_cast(&self, p1: Vec2<T>, p2: Vec2<T>, max_fraction: T) -> RayCastIter<T, D> {
-        let mut r = p2 - p1;
+    pub fn ray_cast(&self, input: RayCastInput<T>) -> RayCastIter<T, D> {
+        let mut r = input.p2 - input.p1;
         assert!(r.length_squared() > T::zero());
         r.normalize();
 
@@ -348,10 +349,10 @@ impl<T: Real, D> Tree<T, D> {
         let v_abs = v.abs();
 
         let segment_aabb = {
-            let t = p1 + (p2 - p1) * max_fraction;
+            let t = input.p1 + (input.p2 - input.p1) * input.max_fraction;
             AABB {
-                lower_bound: p1.min(t),
-                upper_bound: p1.max(t),
+                lower_bound: input.p1.min(t),
+                upper_bound: input.p1.max(t),
             }
         };
 
@@ -366,8 +367,8 @@ impl<T: Real, D> Tree<T, D> {
             segment_aabb,
             v,
             v_abs,
-            p1,
-            p2,
+            p1: input.p1,
+            p2: input.p2,
         }
     }
 }
@@ -400,10 +401,10 @@ pub struct RayCastIter<'a, T, D> {
     tree: &'a Tree<T, D>,
     stack: Vec<usize>,
     segment_aabb: AABB<T>,
-    v: Vec2<T>,
-    v_abs: Vec2<T>,
-    p1: Vec2<T>,
-    p2: Vec2<T>,
+    v: Vector2<T>,
+    v_abs: Vector2<T>,
+    p1: Vector2<T>,
+    p2: Vector2<T>,
 }
 
 impl<'a, T: Real, D> RayCastIter<'a, T, D> {
@@ -427,7 +428,7 @@ impl<'a, T: Real, D> Iterator for RayCastIter<'a, T, D> {
 
             let c = node.aabb.center();
             let h = node.aabb.extents();
-            let separation = self.v.dot(&(self.p1 - c)).abs() - self.v_abs.dot(&h);
+            let separation = self.v.dot(self.p1 - c).abs() - self.v_abs.dot(h);
             if separation > T::zero() {
                 continue;
             }
@@ -445,25 +446,46 @@ impl<'a, T: Real, D> Iterator for RayCastIter<'a, T, D> {
 
 #[cfg(test)]
 mod tests {
-    use crate::*;
+    use super::*;
 
     #[test]
     fn test() {
         let mut tree = Tree::new();
-        dbg!(tree.create_proxy(AABB::new(Vec2::new(1.0, 1.0), Vec2::new(10.0, 10.0)), ()));
         dbg!(tree.create_proxy(
-            AABB::new(Vec2::new(-21.0, -21.0), Vec2::new(20.0, 20.0)),
+            AABB::new(Vector2::new(1.0, 1.0), Vector2::new(10.0, 10.0)),
+            ()
+        ));
+        dbg!(tree.create_proxy(
+            AABB::new(Vector2::new(-21.0, -21.0), Vector2::new(20.0, 20.0)),
             (),
         ));
         dbg!(tree.create_proxy(
-            AABB::new(Vec2::new(-11.0, -11.0), Vec2::new(50.0, 50.0)),
+            AABB::new(Vector2::new(-11.0, -11.0), Vector2::new(50.0, 50.0)),
             (),
         ));
-        dbg!(tree.create_proxy(AABB::new(Vec2::new(-5.0, -5.0), Vec2::new(-2.0, -2.0)), (),));
-        dbg!(tree.create_proxy(AABB::new(Vec2::new(-5.0, -5.0), Vec2::new(-2.0, -2.0)), (),));
-        dbg!(tree.create_proxy(AABB::new(Vec2::new(-5.0, -5.0), Vec2::new(-2.0, -2.0)), (),));
-        dbg!(tree.create_proxy(AABB::new(Vec2::new(-5.0, -5.0), Vec2::new(-2.0, -2.0)), (),));
-        dbg!(tree.create_proxy(AABB::new(Vec2::new(-5.0, -5.0), Vec2::new(-2.0, -2.0)), (),));
-        dbg!(tree.create_proxy(AABB::new(Vec2::new(-5.0, -5.0), Vec2::new(-2.0, -2.0)), (),));
+        dbg!(tree.create_proxy(
+            AABB::new(Vector2::new(-5.0, -5.0), Vector2::new(-2.0, -2.0)),
+            (),
+        ));
+        dbg!(tree.create_proxy(
+            AABB::new(Vector2::new(-5.0, -5.0), Vector2::new(-2.0, -2.0)),
+            (),
+        ));
+        dbg!(tree.create_proxy(
+            AABB::new(Vector2::new(-5.0, -5.0), Vector2::new(-2.0, -2.0)),
+            (),
+        ));
+        dbg!(tree.create_proxy(
+            AABB::new(Vector2::new(-5.0, -5.0), Vector2::new(-2.0, -2.0)),
+            (),
+        ));
+        dbg!(tree.create_proxy(
+            AABB::new(Vector2::new(-5.0, -5.0), Vector2::new(-2.0, -2.0)),
+            (),
+        ));
+        dbg!(tree.create_proxy(
+            AABB::new(Vector2::new(-5.0, -5.0), Vector2::new(-2.0, -2.0)),
+            (),
+        ));
     }
 }

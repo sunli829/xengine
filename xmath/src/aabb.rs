@@ -1,13 +1,13 @@
-use crate::{Real, Vec2};
+use crate::{Real, Vector2};
 
 #[derive(Debug, Clone, Copy)]
 pub struct AABB<T> {
-    pub lower_bound: Vec2<T>,
-    pub upper_bound: Vec2<T>,
+    pub lower_bound: Vector2<T>,
+    pub upper_bound: Vector2<T>,
 }
 
 impl<T: Real> AABB<T> {
-    pub fn new(lower_bound: Vec2<T>, upper_bound: Vec2<T>) -> AABB<T> {
+    pub fn new(lower_bound: Vector2<T>, upper_bound: Vector2<T>) -> AABB<T> {
         AABB {
             lower_bound,
             upper_bound,
@@ -22,11 +22,11 @@ impl<T: Real> AABB<T> {
             && d.y > T::zero()
     }
 
-    pub fn center(&self) -> Vec2<T> {
+    pub fn center(&self) -> Vector2<T> {
         (self.lower_bound + self.upper_bound) * T::half()
     }
 
-    pub fn extents(&self) -> Vec2<T> {
+    pub fn extents(&self) -> Vector2<T> {
         (self.upper_bound - self.lower_bound) * T::half()
     }
 
