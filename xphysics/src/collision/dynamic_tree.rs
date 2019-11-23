@@ -19,14 +19,14 @@ impl<T: Real, D> Node<T, D> {
     }
 }
 
-pub struct Tree<T, D> {
+pub struct DynamicTree<T, D> {
     root: Option<usize>,
     nodes: Slab<Node<T, D>>,
 }
 
-impl<T: Real, D> Tree<T, D> {
-    pub fn new() -> Tree<T, D> {
-        Tree {
+impl<T: Real, D> DynamicTree<T, D> {
+    pub fn new() -> DynamicTree<T, D> {
+        DynamicTree {
             root: None,
             nodes: Default::default(),
         }
@@ -341,9 +341,8 @@ impl<T: Real, D> Tree<T, D> {
     }
 
     pub fn ray_cast(&self, input: RayCastInput<T>) -> RayCastIter<T, D> {
-        let mut r = input.p2 - input.p1;
+        let r = (input.p2 - input.p1).normalize();
         assert!(r.length_squared() > T::zero());
-        r.normalize();
 
         let v = T::one().cross(r);
         let v_abs = v.abs();
@@ -374,7 +373,7 @@ impl<T: Real, D> Tree<T, D> {
 }
 
 pub struct QueryIter<'a, T, D> {
-    tree: &'a Tree<T, D>,
+    tree: &'a DynamicTree<T, D>,
     stack: Vec<usize>,
     aabb: AABB<T>,
 }
@@ -398,7 +397,7 @@ impl<'a, T: Real, D> Iterator for QueryIter<'a, T, D> {
 }
 
 pub struct RayCastIter<'a, T, D> {
-    tree: &'a Tree<T, D>,
+    tree: &'a DynamicTree<T, D>,
     stack: Vec<usize>,
     segment_aabb: AABB<T>,
     v: Vector2<T>,

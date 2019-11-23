@@ -1,6 +1,6 @@
 use crate::{Multiply, Real, Rotation, TransposeMultiply, Vector2};
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Default)]
 pub struct Transform<T> {
     pub p: Vector2<T>,
     pub q: Rotation<T>,

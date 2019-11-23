@@ -1,6 +1,6 @@
 use crate::{Real, Vector2};
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Default)]
 pub struct Matrix22<T> {
     pub ex: Vector2<T>,
     pub ey: Vector2<T>,

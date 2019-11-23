@@ -1,6 +1,6 @@
 use crate::{Multiply, Real, Rotation, Transform, Vector2};
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Default)]
 pub struct Sweep<T> {
     pub local_center: Vector2<T>,
     pub c0: Vector2<T>,

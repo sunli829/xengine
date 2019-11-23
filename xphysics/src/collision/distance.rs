@@ -306,7 +306,7 @@ pub fn distance<T: Real>(
 
     let mut save_a = [0usize; 3];
     let mut save_b = [0usize; 3];
-    let mut save_count = 0;
+    let mut save_count;
 
     let mut iter = 0;
     while iter < MAX_ITERS {

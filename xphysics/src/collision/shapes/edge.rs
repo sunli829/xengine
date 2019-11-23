@@ -1,14 +1,39 @@
 use crate::collision::distance::DistanceProxy;
-use crate::collision::shapes::{Shape, ShapeType};
+use crate::shapes::{Shape, ShapeType};
 use crate::{settings, MassData, RayCastInput, RayCastOutput};
 use std::borrow::Cow;
 use xmath::{DotTrait, Multiply, Real, Transform, TransposeMultiply, Vector2, AABB};
 
 pub struct Edge<T> {
-    pub vertex1: Vector2<T>,
-    pub vertex2: Vector2<T>,
-    pub vertex0: Option<Vector2<T>>,
-    pub vertex3: Option<Vector2<T>>,
+    pub(crate) vertex1: Vector2<T>,
+    pub(crate) vertex2: Vector2<T>,
+    pub(crate) vertex0: Option<Vector2<T>>,
+    pub(crate) vertex3: Option<Vector2<T>>,
+}
+
+impl<T: Real> Edge<T> {
+    pub fn new(v1: Vector2<T>, v2: Vector2<T>) -> Edge<T> {
+        Edge {
+            vertex1: v1,
+            vertex2: v2,
+            vertex0: None,
+            vertex3: None,
+        }
+    }
+
+    pub fn new_with_adjacent(
+        v1: Vector2<T>,
+        v2: Vector2<T>,
+        v0: Vector2<T>,
+        v3: Vector2<T>,
+    ) -> Edge<T> {
+        Edge {
+            vertex1: v1,
+            vertex2: v2,
+            vertex0: Some(v0),
+            vertex3: Some(v3),
+        }
+    }
 }
 
 impl<T: Real> Shape<T> for Edge<T> {

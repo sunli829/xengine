@@ -1,6 +1,6 @@
 use crate::{CrossTrait, DotTrait, Real, Vector2, Vector3};
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Default)]
 pub struct Matrix33<T> {
     pub ex: Vector3<T>,
     pub ey: Vector3<T>,

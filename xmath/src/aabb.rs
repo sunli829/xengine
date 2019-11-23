@@ -1,6 +1,6 @@
 use crate::{Real, Vector2};
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 pub struct AABB<T> {
     pub lower_bound: Vector2<T>,
     pub upper_bound: Vector2<T>,

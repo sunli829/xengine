@@ -1,12 +1,16 @@
 use crate::{MassData, RayCastInput, RayCastOutput};
 use xmath::{Real, Transform, Vector2, AABB};
 
+mod chain;
 mod circle;
 mod edge;
+mod polygon;
 
 use crate::collision::distance::DistanceProxy;
+pub use chain::Chain;
 pub use circle::Circle;
 pub use edge::Edge;
+pub use polygon::Polygon;
 
 pub enum ShapeType {
     Circle,
