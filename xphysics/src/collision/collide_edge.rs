@@ -194,7 +194,46 @@ impl<T: Real> EPCollider<T> {
     }
 
     fn compute_polygon_separation(&mut self) -> EPAxis<T> {
-        unimplemented!()
+        let mut axis = EPAxis {
+            type_: EPAxisType::Unknown,
+            index: 0,
+            separation: -T::max_value(),
+        };
+
+        let perp = Vector2::new(-self.normal.y, self.normal.x);
+
+        for i in 0..self.polygon_b.count {
+            let n = -self.polygon_b.normals[i];
+
+            let s1 = n.dot(self.polygon_b.vertices[i] - self.v1);
+            let s2 = n.dot(self.polygon_b.vertices[i] - self.v2);
+            let s = s1.min(s2);
+
+            if s > self.radius {
+                axis.type_ = EPAxisType::EdgeB;
+                axis.index = i;
+                axis.separation = s;
+                return axis;
+            }
+
+            if n.dot(perp) >= T::zero() {
+                if (n - self.upper_limit).dot(self.normal) < -settings::angular_slop::<T>() {
+                    continue;
+                }
+            } else {
+                if (n - self.lower_limit).dot(self.normal) < -settings::angular_slop::<T>() {
+                    continue;
+                }
+            }
+
+            if s > axis.separation {
+                axis.type_ = EPAxisType::EdgeB;
+                axis.index = i;
+                axis.separation = s;
+            }
+        }
+
+        axis
     }
 
     fn collide(
@@ -514,4 +553,15 @@ impl<T: Real> EPCollider<T> {
 
         manifold.point_count = point_count;
     }
+}
+
+pub fn collide_edge_and_polygon<T: Real>(
+    manifold: &mut Manifold<T>,
+    edge_a: &Edge<T>,
+    xf_a: &Transform<T>,
+    polygon_b: &Polygon<T>,
+    xf_b: &Transform<T>,
+) {
+    let mut collider: EPCollider<T> = unsafe { std::mem::zeroed() };
+    collider.collide(manifold, edge_a, xf_a, polygon_b, xf_b);
 }
