@@ -7,6 +7,7 @@ edition = "2018"
 [dependencies]
 slab = "0.4.2"
 xmath = { path = "../xmath" }
+bitflags = "1.2.1"
 
 [dev-dependencies]
 nvg = "0.5.3"

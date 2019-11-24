@@ -12,6 +12,10 @@ mod dynamic_tree;
 pub mod shapes;
 mod time_of_impact;
 
+pub use collide_circle::{collide_circles, collide_polygon_and_circle};
+pub use collide_edge::{collide_edge_and_circle, collide_edge_and_polygon};
+pub use collide_polygon::collide_polygons;
+
 pub struct MassData<T> {
     pub mass: T,
     pub center: Vector2<T>,

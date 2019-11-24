@@ -85,7 +85,7 @@ fn find_incident_edge<T: Real>(
     c[1].id.0.type_b = ContactFeatureType::Vertex;
 }
 
-fn collide_polygons<T: Real>(
+pub fn collide_polygons<T: Real>(
     manifold: &mut Manifold<T>,
     poly_a: &Polygon<T>,
     xf_a: &Transform<T>,
