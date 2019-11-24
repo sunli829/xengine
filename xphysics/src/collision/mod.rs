@@ -1,6 +1,9 @@
+use crate::collision::distance::{DistanceInput, SimpleCache};
 use crate::settings;
-use xmath::{DotTrait, Real, Vector2};
+use crate::shapes::Shape;
+use xmath::{DotTrait, Real, Transform, Vector2};
 
+mod broad_phase;
 mod collide_circle;
 mod collide_edge;
 mod collide_polygon;
@@ -173,4 +176,25 @@ pub(crate) fn clip_segment_to_line<T: Real>(
     }
 
     num_out
+}
+
+fn test_overlap<T: Real, A: Shape<T>, B: Shape<T>>(
+    shape_a: &A,
+    index_a: usize,
+    shape_b: &B,
+    index_b: usize,
+    xf_a: Transform<T>,
+    xf_b: Transform<T>,
+) -> bool {
+    let input = DistanceInput {
+        proxy_a: &shape_a.distance_proxy(index_a),
+        proxy_b: &shape_b.distance_proxy(index_b),
+        transform_a: xf_a,
+        transform_b: xf_b,
+        use_radii: true,
+    };
+
+    let mut cache: SimpleCache<T> = unsafe { std::mem::zeroed() };
+    let output = distance::distance(&input, &mut cache);
+    output.distance < T::ten() * T::epsilon()
 }

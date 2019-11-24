@@ -324,8 +324,16 @@ impl<T: Real, D> DynamicTree<T, D> {
         true
     }
 
-    pub fn fat_aabb(&self, id: usize) -> AABB<T> {
-        self.nodes[id].aabb
+    pub fn get_fat_aabb(&self, id: usize) -> &AABB<T> {
+        &self.nodes[id].aabb
+    }
+
+    pub fn get_data(&self, proxy_id: usize) -> Option<&D> {
+        self.nodes.get(proxy_id).and_then(|d| d.data.as_ref())
+    }
+
+    pub fn get_data_mut(&mut self, proxy_id: usize) -> Option<&mut D> {
+        self.nodes.get_mut(proxy_id).and_then(|d| d.data.as_mut())
     }
 
     pub fn query(&self, aabb: AABB<T>) -> QueryIter<T, D> {
@@ -368,6 +376,13 @@ impl<T: Real, D> DynamicTree<T, D> {
             v_abs,
             p1: input.p1,
             p2: input.p2,
+        }
+    }
+
+    pub fn shift_origin(&mut self, new_origin: Vector2<T>) {
+        for node in self.nodes.iter_mut().map(|item| item.1) {
+            node.aabb.lower_bound -= new_origin;
+            node.aabb.upper_bound -= new_origin;
         }
     }
 }
