@@ -92,10 +92,10 @@ impl<'a, T: Real, D> FixtureBuilder<'a, T, D> {
 }
 
 pub(crate) struct FixtureProxy<T, D> {
-    aabb: AABB<T>,
-    fixture: *mut Fixture<T, D>,
-    child_index: usize,
-    proxy_id: usize,
+    pub(crate) aabb: AABB<T>,
+    pub(crate) fixture: *mut Fixture<T, D>,
+    pub(crate) child_index: usize,
+    pub(crate) proxy_id: usize,
 }
 
 pub struct Fixture<T, D> {

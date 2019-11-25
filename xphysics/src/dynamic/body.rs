@@ -1,3 +1,4 @@
+use crate::dynamic::contacts::ContactEdge;
 use crate::dynamic::world::WorldInner;
 use crate::shapes::Shape;
 use crate::{Fixture, FixtureBuilder, MassData};
@@ -56,6 +57,7 @@ pub struct Body<T, D> {
     prev: *mut Body<T, D>,
     next: *mut Body<T, D>,
     fixture_list: Vec<Box<Fixture<T, D>>>,
+    contact_list: *mut ContactEdge<T, D>,
     mass: T,
     pub(crate) inv_mass: T,
     i: T,
@@ -303,6 +305,10 @@ impl<T: Real, D> Body<T, D> {
         self.flags.contains(BodyFlags::DEBUG_DRAW)
     }
 
+    pub fn set_body_type(&mut self, type_: BodyType) {
+        self.type_ = type_;
+    }
+
     pub fn set_bullet(&mut self, flag: bool) {
         self.flags.set(BodyFlags::BULLET, flag);
     }
@@ -333,6 +339,10 @@ impl<T: Real, D> Body<T, D> {
         self.flags.contains(BodyFlags::ACTIVE)
     }
 
+    pub fn set_fixed_rotation(&mut self, flag: bool) {
+        self.flags.set(BodyFlags::FIXED_ROTATION, flag);
+    }
+
     pub fn is_fixed_rotation(&self) -> bool {
         self.flags.contains(BodyFlags::FIXED_ROTATION)
     }
@@ -352,6 +362,10 @@ impl<T: Real, D> Body<T, D> {
 
     pub fn get_fixture_list(&self) -> &[Box<Fixture<T, D>>] {
         &self.fixture_list
+    }
+
+    pub(crate) fn get_contact_list(&self) -> *mut ContactEdge<T, D> {
+        self.contact_list
     }
 
     fn reset_mass(&mut self) {

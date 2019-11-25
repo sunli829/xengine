@@ -543,6 +543,94 @@ impl<'a, T: Real, D> ContactSolver<'a, T, D> {
 
         min_separation >= -T::from_i32(3) * settings::linear_slop()
     }
+
+    fn solve_toi_position_constraints(&mut self, toi_index_a: usize, toi_index_b: usize) -> bool {
+        let mut min_separation = T::zero();
+
+        for i in 0..self.contacts.len() {
+            let pc = &self.position_constraints[i];
+
+            let index_a = pc.index_a;
+            let index_b = pc.index_b;
+            let local_center_a = pc.local_center_a;
+            let local_center_b = pc.local_center_b;
+            let point_count = pc.point_count;
+
+            let mut ma = T::zero();
+            let mut ia = T::zero();
+            if index_a == toi_index_a || index_a == toi_index_b {
+                ma = pc.inv_mass_a;
+                ia = pc.inv_i_a;
+            }
+
+            let mut mb = T::zero();
+            let mut ib = T::zero();
+            if index_b == toi_index_a || index_b == toi_index_b {
+                mb = pc.inv_mass_b;
+                ib = pc.inv_i_b;
+            }
+
+            let mut ca = self.positions[index_a].c;
+            let mut aa = self.positions[index_a].a;
+
+            let mut cb = self.positions[index_b].c;
+            let mut ab = self.positions[index_b].a;
+
+            for j in 0..point_count {
+                let xf_a = {
+                    let r = Rotation::new(aa);
+                    Transform {
+                        q: r,
+                        p: ca - r.multiply(local_center_a),
+                    }
+                };
+                let xf_b = {
+                    let r = Rotation::new(ab);
+                    Transform {
+                        q: r,
+                        p: cb - r.multiply(local_center_b),
+                    }
+                };
+
+                let psm = PositionSolverManifold::new(pc, &xf_a, &xf_b, j);
+                let normal = psm.normal;
+
+                let point = psm.point;
+                let separation = psm.separation;
+
+                let ra = point - ca;
+                let rb = point - cb;
+
+                min_separation = min_separation.min(separation);
+
+                let c = (settings::toi_baugarte::<T>()
+                    * (separation + settings::linear_slop::<T>()))
+                .clamp(-settings::max_linear_correction::<T>(), T::zero());
+
+                let rna = ra.cross(normal);
+                let rnb = rb.cross(normal);
+                let k = ma + mb + ia * rna * rna + ib * rnb * rnb;
+
+                let impulse = if k > T::zero() { -c / k } else { T::zero() };
+
+                let p = normal * impulse;
+
+                ca -= p * ma;
+                aa -= ia * ra.cross(p);
+
+                cb += p * mb;
+                ab += ib * rb.cross(p);
+            }
+
+            self.positions[index_a].c = ca;
+            self.positions[index_a].a = aa;
+
+            self.positions[index_b].c = cb;
+            self.positions[index_b].a = ab;
+        }
+
+        min_separation >= -T::from_f32(1.5) * settings::linear_slop::<T>()
+    }
 }
 
 struct PositionSolverManifold<T> {

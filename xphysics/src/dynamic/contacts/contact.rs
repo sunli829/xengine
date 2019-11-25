@@ -13,11 +13,11 @@ fn mix_restitution<T: Real>(restitution1: T, restitution2: T) -> T {
     restitution1.max(restitution2)
 }
 
-struct ContactEdge<T, D> {
-    other: *mut Body<T, D>,
-    contact: *mut Contact<T, D>,
-    prev: *mut ContactEdge<T, D>,
-    next: *mut ContactEdge<T, D>,
+pub struct ContactEdge<T, D> {
+    pub other: *mut Body<T, D>,
+    pub contact: *mut Contact<T, D>,
+    pub prev: *mut ContactEdge<T, D>,
+    pub next: *mut ContactEdge<T, D>,
 }
 
 bitflags! {
@@ -37,11 +37,31 @@ pub struct ContactImpulse<T> {
     pub count: usize,
 }
 
-pub trait ContactListener<T, D> {
+pub trait ContactListener<T, D>: 'static {
     fn begin_contact(&mut self, _contact: &mut Contact<T, D>) {}
     fn end_contact(&mut self, _contact: &mut Contact<T, D>) {}
     fn pre_solve(&mut self, _contact: &mut Contact<T, D>, _old_manifold: &Manifold<T>) {}
     fn post_solve(&mut self, _contact: &mut Contact<T, D>, _impulse: &ContactImpulse<T>) {}
+}
+
+pub trait ContactFilter<T, D>: 'static {
+    fn should_collide(&self, fixture_a: &Fixture<T, D>, fixture_b: &Fixture<T, D>) -> bool;
+}
+
+pub struct DefaultContactFilter;
+
+impl<T: Real, D> ContactFilter<T, D> for DefaultContactFilter {
+    fn should_collide(&self, fixture_a: &Fixture<T, D>, fixture_b: &Fixture<T, D>) -> bool {
+        let filter_a = fixture_a.filter();
+        let filter_b = fixture_b.filter();
+
+        if filter_a.group_index == filter_b.group_index && filter_a.group_index != 0 {
+            return filter_a.group_index > 0;
+        }
+
+        (filter_a.mask_bits & filter_b.category_bits) != 0
+            && (filter_a.category_bits & filter_b.mask_bits) != 0
+    }
 }
 
 pub struct Contact<T, D> {
