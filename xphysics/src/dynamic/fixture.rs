@@ -1,7 +1,6 @@
-use crate::collision::shapes::ShapeType;
 use crate::shapes::Shape;
-use crate::{Body, MassData};
-use xmath::{Real, AABB};
+use crate::{Body, BroadPhase, MassData, RayCastInput, RayCastOutput};
+use xmath::{Real, Transform, Vector2, AABB};
 
 #[derive(Copy, Clone)]
 pub struct Filter {
@@ -92,7 +91,7 @@ impl<'a, T: Real, D> FixtureBuilder<'a, T, D> {
     }
 }
 
-struct FixtureProxy<T, D> {
+pub(crate) struct FixtureProxy<T, D> {
     aabb: AABB<T>,
     fixture: *mut Fixture<T, D>,
     child_index: usize,
@@ -105,7 +104,7 @@ pub struct Fixture<T, D> {
     shape: Box<dyn Shape<T> + 'static>,
     friction: T,
     restitution: T,
-    proxies: Vec<FixtureProxy<T, D>>,
+    proxies: Vec<Box<FixtureProxy<T, D>>>,
     filter: Filter,
     is_sensor: bool,
     data: Option<D>,
@@ -156,11 +155,102 @@ impl<T: Real, D> Fixture<T, D> {
         self.data.as_mut()
     }
 
+    pub fn set_data(&mut self, data: D) {
+        self.data = Some(data);
+    }
+
     pub fn density(&self) -> T {
         self.density
     }
 
+    pub fn set_density(&mut self, density: T) {
+        assert!(density.is_valid() && density >= T::zero());
+        self.density = density;
+    }
+
+    pub fn friction(&self) -> T {
+        self.friction
+    }
+
+    pub fn set_friction(&mut self, friction: T) {
+        self.friction = friction;
+    }
+
+    pub fn restitution(&self) -> T {
+        self.restitution
+    }
+
+    pub fn set_restitution(&mut self, restitution: T) {
+        self.restitution = restitution;
+    }
+
+    pub fn test_point(&self, pt: &Vector2<T>) -> bool {
+        self.shape.test_point(self.body().transform(), pt)
+    }
+
+    pub fn ray_cast(
+        &self,
+        input: &RayCastInput<T>,
+        child_index: usize,
+    ) -> Option<RayCastOutput<T>> {
+        self.shape
+            .ray_cast(input, self.body().transform(), child_index)
+    }
+
     pub fn mass_data(&self) -> MassData<T> {
-        unimplemented!()
+        self.shape.compute_mass(self.density)
+    }
+
+    pub fn aabb(&self, child_index: usize) -> &AABB<T> {
+        &self.proxies[child_index].aabb
+    }
+
+    pub(crate) fn create_proxies(
+        &mut self,
+        broad_phase: &mut BroadPhase<T, *mut FixtureProxy<T, D>>,
+        xf: &Transform<T>,
+    ) {
+        self.proxies.clear();
+        for i in 0..self.shape.child_count() {
+            let aabb = self.shape.compute_aabb(xf, i);
+            let fixture_ptr = self as *mut Fixture<T, D>;
+            let mut proxy = Box::new(FixtureProxy {
+                aabb,
+                fixture: fixture_ptr,
+                child_index: i,
+                proxy_id: 0,
+            });
+            proxy.proxy_id =
+                broad_phase.create_proxy(aabb, proxy.as_mut() as *mut FixtureProxy<T, D>);
+            self.proxies.push(proxy);
+        }
+    }
+
+    pub(crate) fn destroy_proxies(
+        &mut self,
+        broad_phase: &mut BroadPhase<T, *mut FixtureProxy<T, D>>,
+    ) {
+        for proxy in self.proxies.drain(..) {
+            broad_phase.destroy_proxy(proxy.proxy_id);
+        }
+    }
+
+    pub(crate) fn synchronize(
+        &mut self,
+        broad_phase: &mut BroadPhase<T, *mut FixtureProxy<T, D>>,
+        xf1: &Transform<T>,
+        xf2: &Transform<T>,
+    ) {
+        if self.proxies.is_empty() {
+            return;
+        }
+
+        for proxy in &mut self.proxies {
+            let aabb1 = self.shape.compute_aabb(xf1, proxy.child_index);
+            let aabb2 = self.shape.compute_aabb(xf2, proxy.child_index);
+            proxy.aabb = aabb1.combine(&aabb2);
+            let displacement = xf2.p - xf1.p;
+            broad_phase.move_proxy(proxy.proxy_id, proxy.aabb, displacement);
+        }
     }
 }

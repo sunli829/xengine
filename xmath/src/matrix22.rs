@@ -1,4 +1,4 @@
-use crate::{Real, Vector2};
+use crate::{DotTrait, Multiply, Real, TransposeMultiply, Vector2};
 
 #[derive(Debug, Copy, Clone, Default)]
 pub struct Matrix22<T> {
@@ -65,5 +65,25 @@ impl<T: Real> Matrix22<T> {
             x: det * (a22 * b.x - a12 * b.y),
             y: det * (a11 * b.y - a21 * b.x),
         }
+    }
+}
+
+impl<T: Real> Multiply<Vector2<T>> for Matrix22<T> {
+    type Output = Vector2<T>;
+
+    fn multiply(self, rhs: Vector2<T>) -> Self::Output {
+        let a = self;
+        let v = rhs;
+        Vector2::new(a.ex.x * v.x + a.ey.x * v.y, a.ex.y * v.x + a.ey.y * v.y)
+    }
+}
+
+impl<T: Real> TransposeMultiply<Vector2<T>> for Matrix22<T> {
+    type Output = Vector2<T>;
+
+    fn transpose_multiply(self, rhs: Vector2<T>) -> Self::Output {
+        let a = self;
+        let v = rhs;
+        Vector2::new(v.dot(a.ex), v.dot(a.ey))
     }
 }

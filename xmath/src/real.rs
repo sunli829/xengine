@@ -69,6 +69,16 @@ pub trait Real:
     fn max(self, other: Self) -> Self;
 
     fn min(self, other: Self) -> Self;
+
+    fn clamp(self, min: Self, max: Self) -> Self {
+        if self < min {
+            min
+        } else if self > max {
+            max
+        } else {
+            self
+        }
+    }
 }
 
 pub trait RealConstants {

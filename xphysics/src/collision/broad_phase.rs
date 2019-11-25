@@ -7,7 +7,7 @@ struct Pair {
     proxy_id_b: usize,
 }
 
-pub struct BroadPhase<T, D> {
+pub(crate) struct BroadPhase<T, D> {
     tree: DynamicTree<T, D>,
     move_buffer: Vec<Option<usize>>,
     pair_buffer: Vec<Pair>,

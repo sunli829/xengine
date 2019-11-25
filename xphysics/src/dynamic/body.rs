@@ -1,6 +1,9 @@
+use crate::dynamic::world::WorldInner;
 use crate::shapes::Shape;
-use crate::{Fixture, FixtureBuilder, MassData, World};
-use xmath::{CrossTrait, DotTrait, Multiply, Real, Sweep, Transform, TransposeMultiply, Vector2};
+use crate::{Fixture, FixtureBuilder, MassData};
+use xmath::{
+    CrossTrait, DotTrait, Multiply, Real, Rotation, Sweep, Transform, TransposeMultiply, Vector2,
+};
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum BodyType {
@@ -42,21 +45,21 @@ bitflags! {
 pub struct Body<T, D> {
     type_: BodyType,
     flags: BodyFlags,
-    island_index: usize,
+    pub(crate) island_index: usize,
     xf: Transform<T>,
-    sweep: Sweep<T>,
+    pub(crate) sweep: Sweep<T>,
     linear_velocity: Vector2<T>,
     angular_velocity: T,
     force: Vector2<T>,
     torque: T,
-    world: *mut World,
+    world: *mut WorldInner<T, D>,
     prev: *mut Body<T, D>,
     next: *mut Body<T, D>,
     fixture_list: Vec<Box<Fixture<T, D>>>,
     mass: T,
-    inv_mass: T,
+    pub(crate) inv_mass: T,
     i: T,
-    inv_i: T,
+    pub(crate) inv_i: T,
     linear_damping: T,
     angular_damping: T,
     gravity_scale: T,
@@ -65,6 +68,14 @@ pub struct Body<T, D> {
 }
 
 impl<T: Real, D> Body<T, D> {
+    pub(crate) fn world_mut(&mut self) -> &mut WorldInner<T, D> {
+        unsafe { self.world.as_mut().unwrap() }
+    }
+
+    pub(crate) fn world(&self) -> &WorldInner<T, D> {
+        unsafe { self.world.as_ref().unwrap() }
+    }
+
     pub fn body_type(&self) -> BodyType {
         self.type_
     }
@@ -115,6 +126,109 @@ impl<T: Real, D> Body<T, D> {
 
     pub fn angular_velocity(&self) -> T {
         self.angular_velocity
+    }
+
+    pub fn apply_force(&mut self, force: Vector2<T>, point: Vector2<T>, wake: bool) {
+        if self.type_ != BodyType::Dynamic {
+            return;
+        }
+
+        if wake && !self.flags.contains(BodyFlags::AWAKE) {
+            self.set_awake(true);
+        }
+
+        if self.flags.contains(BodyFlags::AWAKE) {
+            self.force += force;
+            self.torque += (point - self.sweep.c).cross(force);
+        }
+    }
+
+    pub fn apply_force_to_center(&mut self, force: Vector2<T>, wake: bool) {
+        if self.type_ != BodyType::Dynamic {
+            return;
+        }
+
+        if wake && !self.flags.contains(BodyFlags::AWAKE) {
+            self.set_awake(true);
+        }
+
+        if self.flags.contains(BodyFlags::AWAKE) {
+            self.force += force;
+        }
+    }
+
+    pub fn apply_torque(&mut self, torque: T, wake: bool) {
+        if self.type_ != BodyType::Dynamic {
+            return;
+        }
+
+        if wake && !self.flags.contains(BodyFlags::AWAKE) {
+            self.set_awake(true);
+        }
+
+        if self.flags.contains(BodyFlags::AWAKE) {
+            self.torque += torque;
+        }
+    }
+
+    pub fn apply_linear_impulse(&mut self, impulse: Vector2<T>, point: Vector2<T>, wake: bool) {
+        if self.type_ != BodyType::Dynamic {
+            return;
+        }
+
+        if wake && !self.flags.contains(BodyFlags::AWAKE) {
+            self.set_awake(true);
+        }
+
+        if self.flags.contains(BodyFlags::AWAKE) {
+            self.linear_velocity += impulse * self.inv_mass;
+            self.angular_velocity += self.inv_i * (point - self.sweep.c).cross(impulse);
+        }
+    }
+
+    pub fn apply_linear_impulse_to_center(&mut self, impulse: Vector2<T>, wake: bool) {
+        if self.type_ != BodyType::Dynamic {
+            return;
+        }
+
+        if wake && !self.flags.contains(BodyFlags::AWAKE) {
+            self.set_awake(true);
+        }
+
+        if self.flags.contains(BodyFlags::AWAKE) {
+            self.linear_velocity += impulse * self.inv_mass;
+        }
+    }
+
+    pub fn apply_angular_impulse(&mut self, impulse: T, wake: bool) {
+        if self.type_ != BodyType::Dynamic {
+            return;
+        }
+
+        if wake && !self.flags.contains(BodyFlags::AWAKE) {
+            self.set_awake(true);
+        }
+
+        if self.flags.contains(BodyFlags::AWAKE) {
+            self.angular_velocity += impulse * self.inv_i;
+        }
+    }
+
+    pub(crate) fn synchronize_transform(&mut self) {
+        self.xf.q = Rotation::new(self.sweep.a);
+        self.xf.p = self.sweep.c - self.xf.q.multiply(self.sweep.local_center);
+    }
+
+    pub(crate) fn advance(&mut self, alpha: T) {
+        self.sweep.advance(alpha);
+        self.sweep.c = self.sweep.c0;
+        self.sweep.a = self.sweep.a0;
+        self.xf.q = Rotation::new(self.sweep.a);
+        self.xf.p = self.sweep.c - self.xf.q.multiply(self.sweep.local_center);
+    }
+
+    pub(crate) fn synchronize_fixtures(&mut self) {
+        unimplemented!()
     }
 
     pub fn mass(&self) -> T {
@@ -301,7 +415,7 @@ impl<T: Real, D> Body<T, D> {
         FixtureBuilder::new(self, shape, density)
     }
 
-    pub(crate) fn add_fixture(&mut self, mut fixture: Box<Fixture<T, D>>) -> &mut Fixture<T, D> {
+    pub(crate) fn add_fixture(&mut self, fixture: Box<Fixture<T, D>>) -> &mut Fixture<T, D> {
         self.fixture_list.push(fixture);
         self.fixture_list.last_mut().unwrap()
     }

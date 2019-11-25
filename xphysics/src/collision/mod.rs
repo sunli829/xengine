@@ -1,7 +1,7 @@
 use crate::collision::distance::{DistanceInput, SimpleCache};
 use crate::settings;
 use crate::shapes::Shape;
-use xmath::{DotTrait, Real, Transform, Vector2};
+use xmath::{DotTrait, Multiply, Real, Transform, Vector2};
 
 mod broad_phase;
 mod collide_circle;
@@ -12,9 +12,12 @@ mod dynamic_tree;
 pub mod shapes;
 mod time_of_impact;
 
-pub use collide_circle::{collide_circles, collide_polygon_and_circle};
-pub use collide_edge::{collide_edge_and_circle, collide_edge_and_polygon};
-pub use collide_polygon::collide_polygons;
+pub(crate) use broad_phase::BroadPhase;
+pub use dynamic_tree::DynamicTree;
+
+pub(crate) use collide_circle::{collide_circles, collide_polygon_and_circle};
+pub(crate) use collide_edge::{collide_edge_and_circle, collide_edge_and_polygon};
+pub(crate) use collide_polygon::collide_polygons;
 
 pub struct MassData<T> {
     pub mass: T,
@@ -76,13 +79,13 @@ pub enum ManifoldType {
     FaceB,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub struct Manifold<T> {
-    points: [ManifoldPoint<T>; settings::MAX_MANIFOLD_POINTS],
-    local_normal: Vector2<T>,
-    local_point: Vector2<T>,
-    type_: ManifoldType,
-    point_count: usize,
+    pub points: [ManifoldPoint<T>; settings::MAX_MANIFOLD_POINTS],
+    pub local_normal: Vector2<T>,
+    pub local_point: Vector2<T>,
+    pub type_: ManifoldType,
+    pub point_count: usize,
 }
 
 impl<T> Default for Manifold<T> {
@@ -91,11 +94,75 @@ impl<T> Default for Manifold<T> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct WorldManifold<T> {
-    normal: Vector2<T>,
-    points: [Vector2<T>; settings::MAX_MANIFOLD_POINTS],
-    separations: [T; settings::MAX_MANIFOLD_POINTS],
+    pub normal: Vector2<T>,
+    pub points: [Vector2<T>; settings::MAX_MANIFOLD_POINTS],
+    pub separations: [T; settings::MAX_MANIFOLD_POINTS],
+}
+
+impl<T: Real> WorldManifold<T> {
+    pub(crate) fn new(
+        manifold: &Manifold<T>,
+        xf_a: &Transform<T>,
+        radius_a: T,
+        xf_b: &Transform<T>,
+        radius_b: T,
+    ) -> WorldManifold<T> {
+        let mut world_manifold = WorldManifold::<T>::default();
+
+        if manifold.point_count == 0 {
+            return world_manifold;
+        }
+
+        match manifold.type_ {
+            ManifoldType::Circles => {
+                world_manifold.normal = Vector2::new(T::one(), T::zero());
+                let point_a = xf_a.multiply(manifold.local_point);
+                let point_b = xf_b.multiply(manifold.points[0].local_point);
+                if point_a.distance_squared(&point_b) > T::epsilon() * T::epsilon() {
+                    world_manifold.normal = (point_b - point_a).normalize();
+                }
+
+                let c_a = point_a + world_manifold.normal * radius_a;
+                let c_b = point_b - world_manifold.normal * radius_b;
+                world_manifold.points[0] = (c_a + c_b) * T::half();
+                world_manifold.separations[0] = (c_b - c_a).dot(world_manifold.normal);
+            }
+            ManifoldType::FaceA => {
+                world_manifold.normal = xf_a.q.multiply(manifold.local_normal);
+                let plane_point = xf_a.multiply(manifold.local_point);
+
+                for i in 0..manifold.point_count {
+                    let clip_point = xf_b.multiply(manifold.points[i].local_point);
+                    let c_a = clip_point
+                        + world_manifold.normal
+                            * (radius_a - (clip_point - plane_point).dot(world_manifold.normal));
+                    let c_b = clip_point - world_manifold.normal * radius_b;
+                    world_manifold.points[i] = (c_a + c_b) * T::half();
+                    world_manifold.separations[i] = (c_b - c_a).dot(world_manifold.normal);
+                }
+            }
+            ManifoldType::FaceB => {
+                world_manifold.normal = xf_b.q.multiply(manifold.local_normal);
+                let plane_point = xf_b.multiply(manifold.local_point);
+
+                for i in 0..manifold.point_count {
+                    let clip_point = xf_a.multiply(manifold.points[i].local_point);
+                    let c_b = clip_point
+                        + world_manifold.normal
+                            * (radius_b - (clip_point - plane_point).dot(world_manifold.normal));
+                    let c_a = clip_point - world_manifold.normal * radius_a;
+                    world_manifold.points[i] = (c_a + c_b) * T::half();
+                    world_manifold.separations[i] = (c_a - c_b).dot(world_manifold.normal);
+                }
+
+                world_manifold.normal = -world_manifold.normal;
+            }
+        }
+
+        world_manifold
+    }
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -182,10 +249,10 @@ pub(crate) fn clip_segment_to_line<T: Real>(
     num_out
 }
 
-fn test_overlap<T: Real, A: Shape<T>, B: Shape<T>>(
-    shape_a: &A,
+pub(crate) fn test_overlap<T: Real>(
+    shape_a: &dyn Shape<T>,
     index_a: usize,
-    shape_b: &B,
+    shape_b: &dyn Shape<T>,
     index_b: usize,
     xf_a: Transform<T>,
     xf_b: Transform<T>,
