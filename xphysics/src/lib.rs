@@ -19,6 +19,7 @@ mod tests {
         let mut world = World::<f32, _>::new(Vector2::zero());
         let body = world.create_body(BodyDef {
             data: 10,
+            type_: BodyType::Dynamic,
             ..BodyDef::default()
         });
         let fixture = body.create_fixture(FixtureDef {
