@@ -8,13 +8,11 @@ mod collide_circle;
 mod collide_edge;
 mod collide_polygon;
 mod distance;
-mod dynamic_tree;
+pub(crate) mod dynamic_tree;
 pub mod shapes;
 mod time_of_impact;
 
 pub(crate) use broad_phase::BroadPhase;
-pub use dynamic_tree::DynamicTree;
-
 pub(crate) use collide_circle::{collide_circles, collide_polygon_and_circle};
 pub(crate) use collide_edge::{collide_edge_and_circle, collide_edge_and_polygon};
 pub(crate) use collide_polygon::collide_polygons;

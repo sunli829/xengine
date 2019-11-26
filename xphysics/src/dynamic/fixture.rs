@@ -29,6 +29,12 @@ pub struct FixtureDef<T, D> {
     pub filter: Filter,
 }
 
+impl<T: Real, D: Default> Default for FixtureDef<T, D> {
+    fn default() -> Self {
+        unimplemented!()
+    }
+}
+
 pub(crate) struct FixtureProxy<T, D> {
     pub(crate) aabb: AABB<T>,
     pub(crate) fixture_ptr: *mut Fixture<T, D>,
@@ -154,7 +160,7 @@ impl<T: Real, D> Fixture<T, D> {
             let fixture_ptr = self as *mut Fixture<T, D>;
             let mut proxy = Box::new(FixtureProxy {
                 aabb,
-                fixture_ptr: fixture_ptr,
+                fixture_ptr,
                 child_index: i,
                 proxy_id: 0,
             });

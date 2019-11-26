@@ -3,8 +3,7 @@ use crate::dynamic::fixture::FixtureDef;
 use crate::dynamic::world::{WorldFlags, WorldInner};
 use crate::shapes::Shape;
 use crate::{Fixture, MassData};
-use bitflags::_core::alloc::Layout;
-use bitflags::_core::future::Future;
+use std::alloc::Layout;
 use xmath::{
     CrossTrait, DotTrait, Multiply, Real, Rotation, Sweep, Transform, TransposeMultiply, Vector2,
 };
@@ -31,6 +30,27 @@ pub struct BodyDef<T, D> {
     pub active: bool,
     pub data: D,
     pub gravity_scale: T,
+}
+
+impl<T: Real, D: Default> Default for BodyDef<T, D> {
+    fn default() -> Self {
+        BodyDef {
+            type_: BodyType::Static,
+            position: Vector2::zero(),
+            angle: T::zero(),
+            linear_velocity: Vector2::zero(),
+            angular_velocity: T::zero(),
+            linear_damping: T::zero(),
+            angular_damping: T::zero(),
+            allow_sleep: true,
+            awake: true,
+            fixed_rotation: false,
+            bullet: false,
+            active: true,
+            data: Default::default(),
+            gravity_scale: T::zero(),
+        }
+    }
 }
 
 bitflags! {
@@ -181,14 +201,6 @@ impl<T: Real, D> Body<T, D> {
 
             (*self.world_ptr).body_count -= 1;
         }
-    }
-
-    pub(crate) fn world_mut(&mut self) -> &mut WorldInner<T, D> {
-        unsafe { self.world_ptr.as_mut().unwrap() }
-    }
-
-    pub(crate) fn world(&self) -> &WorldInner<T, D> {
-        unsafe { self.world_ptr.as_ref().unwrap() }
     }
 
     pub fn body_type(&self) -> BodyType {
@@ -604,19 +616,18 @@ impl<T: Real, D> Body<T, D> {
             });
             self.fixture_list.push(fixture);
 
-            let fixture = (self.fixture_list.last_mut().unwrap() as *mut Fixture<T, D>)
-                .as_mut()
-                .unwrap();
+            let fixture = self.fixture_list.last_mut().unwrap().as_mut() as *mut Fixture<T, D>;
             if self.flags.contains(BodyFlags::ACTIVE) {
-                fixture.create_proxies(&mut (*self.world_ptr).contact_manager.broad_phase, self.xf);
+                (*fixture)
+                    .create_proxies(&mut (*self.world_ptr).contact_manager.broad_phase, self.xf);
             }
 
-            if fixture.density > T::zero() {
+            if (*fixture).density > T::zero() {
                 self.reset_mass();
             }
 
             (*self.world_ptr).flags.insert(WorldFlags::NEW_FIXTURE);
-            fixture
+            fixture.as_mut().unwrap()
         }
     }
 }

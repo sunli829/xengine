@@ -150,11 +150,11 @@ struct ReferenceFace<T> {
     side_offset2: T,
 }
 
-enum VertexType {
-    ISOLATED,
-    CONCAVE,
-    CONVEX,
-}
+//enum VertexType {
+//    ISOLATED,
+//    CONCAVE,
+//    CONVEX,
+//}
 
 struct EPCollider<T: Real> {
     polygon_b: TempPolygon<T>,
@@ -168,8 +168,8 @@ struct EPCollider<T: Real> {
     normal1: Vector2<T>,
     normal2: Vector2<T>,
     normal: Vector2<T>,
-    type1: VertexType,
-    type2: VertexType,
+//    type1: VertexType,
+//    type2: VertexType,
     lower_limit: Vector2<T>,
     upper_limit: Vector2<T>,
     radius: T,

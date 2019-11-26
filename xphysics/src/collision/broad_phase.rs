@@ -8,7 +8,7 @@ struct Pair {
 }
 
 pub(crate) struct BroadPhase<T, D> {
-    tree: DynamicTree<T, D>,
+    pub(crate) tree: DynamicTree<T, D>,
     move_buffer: Vec<Option<usize>>,
     pair_buffer: Vec<Pair>,
 }
@@ -41,18 +41,6 @@ impl<T: Real, D> BroadPhase<T, D> {
 
     pub fn touch_proxy(&mut self, proxy_id: usize) {
         self.buffer_move(proxy_id);
-    }
-
-    pub fn get_fat_aabb(&self, proxy_id: usize) -> &AABB<T> {
-        self.tree.get_fat_aabb(proxy_id)
-    }
-
-    pub fn get_data(&self, proxy_id: usize) -> Option<&D> {
-        self.tree.get_data(proxy_id)
-    }
-
-    pub fn get_data_mut(&mut self, proxy_id: usize) -> Option<&mut D> {
-        self.tree.get_data_mut(proxy_id)
     }
 
     pub fn test_overlap(&self, proxy_id_a: usize, proxy_id_b: usize) -> bool {

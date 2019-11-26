@@ -40,10 +40,10 @@ pub fn max_linear_correction<T: Real>() -> T {
     T::from_f32(0.2)
 }
 
-#[inline]
-pub fn max_angular_correction<T: Real>() -> T {
-    T::from_i32(8) / T::from_i32(180) * T::pi()
-}
+//#[inline]
+//pub fn max_angular_correction<T: Real>() -> T {
+//    T::from_i32(8) / T::from_i32(180) * T::pi()
+//}
 
 #[inline]
 pub fn max_translation<T: Real>() -> T {

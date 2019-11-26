@@ -35,8 +35,8 @@ pub struct Velocity<T> {
     pub w: T,
 }
 
-pub struct SolverData<'a, T> {
-    pub step: TimeStep<T>,
-    pub positions: &'a [Position<T>],
-    pub velocities: &'a [Velocity<T>],
-}
+//pub struct SolverData<'a, T> {
+//    pub step: TimeStep<T>,
+//    pub positions: &'a [Position<T>],
+//    pub velocities: &'a [Velocity<T>],
+//}

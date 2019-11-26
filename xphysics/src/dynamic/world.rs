@@ -1,12 +1,14 @@
+use crate::collision::dynamic_tree;
 use crate::dynamic::body::{BodyDef, BodyFlags};
 use crate::dynamic::contact_manager::ContactManager;
 use crate::dynamic::contacts::{ContactFilter, ContactFlags, ContactListener};
+use crate::dynamic::fixture::FixtureProxy;
 use crate::dynamic::island::Island;
 use crate::dynamic::time_step::{Profile, TimeStep};
 use crate::timer::Timer;
-use crate::{Body, BodyType, Fixture};
+use crate::{Body, BodyType, Fixture, RayCastInput};
 use std::alloc::Layout;
-use xmath::{Real, Vector2};
+use xmath::{Real, Vector2, AABB};
 
 bitflags! {
     pub struct WorldFlags: u32 {
@@ -357,5 +359,39 @@ impl<T: Real, D> World<T, D> {
 
         self.0.flags.remove(WorldFlags::LOCKED);
         self.0.profile.step = timer.get_duration();
+    }
+
+    pub fn query_aabb(&self, aabb: AABB<T>) -> impl Iterator<Item = &mut Fixture<T, D>> {
+        self.0
+            .contact_manager
+            .broad_phase
+            .tree
+            .query(aabb)
+            .map(|item| unsafe { ((*(*item.2)).fixture_ptr).as_mut().unwrap() })
+    }
+
+    pub fn ray_cast(&self, input: RayCastInput<T>) -> RayCastIter<T, D> {
+        RayCastIter {
+            iter: self.0.contact_manager.broad_phase.tree.ray_cast(input),
+        }
+    }
+}
+
+pub struct RayCastIter<'a, T, D> {
+    iter: dynamic_tree::RayCastIter<'a, T, *mut FixtureProxy<T, D>>,
+}
+
+impl<'a, T: Real, D> RayCastIter<'a, T, D> {
+    pub fn set_max_fraction(&mut self, value: T) {
+        self.iter.set_max_fraction(value);
+    }
+}
+
+impl<'a, T: Real, D> Iterator for RayCastIter<'a, T, D> {
+    type Item = &'a mut Fixture<T, D>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        Iterator::next(&mut self.iter)
+            .map(|item| unsafe { ((*(*item.2)).fixture_ptr).as_mut().unwrap() })
     }
 }
