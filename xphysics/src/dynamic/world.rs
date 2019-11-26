@@ -220,15 +220,18 @@ impl<T: Real, D> World<T, D> {
 
             let stack_size = self.0.body_count;
             let mut stack = Vec::with_capacity(stack_size);
-            let seed = self.0.body_list;
+            let mut seed = self.0.body_list;
             while !seed.is_null() {
                 if (*seed).flags.contains(BodyFlags::ISLAND) {
+                    seed = (*seed).next_ptr;
                     continue;
                 }
                 if !(*seed).is_awake() || !(*seed).is_active() {
+                    seed = (*seed).next_ptr;
                     continue;
                 }
                 if (*seed).body_type() == BodyType::Static {
+                    seed = (*seed).next_ptr;
                     continue;
                 }
 
@@ -270,6 +273,8 @@ impl<T: Real, D> World<T, D> {
                         stack.push(other);
                         (*other).flags.insert(BodyFlags::ISLAND);
                     }
+
+                    seed = (*seed).next_ptr;
                 }
 
                 let mut profile = Profile::default();
@@ -290,9 +295,11 @@ impl<T: Real, D> World<T, D> {
             let mut b = self.0.body_list;
             while !b.is_null() {
                 if !(*b).flags.contains(BodyFlags::ISLAND) {
+                    b = (*b).next_ptr;
                     continue;
                 }
                 if (*b).body_type() == BodyType::Static {
+                    b = (*b).next_ptr;
                     continue;
                 }
                 (*b).synchronize_fixtures();

@@ -1,7 +1,7 @@
+use crate::collision::shapes::Shape;
 use crate::dynamic::contacts::ContactEdge;
 use crate::dynamic::fixture::FixtureDef;
 use crate::dynamic::world::{WorldFlags, WorldInner};
-use crate::shapes::Shape;
 use crate::{Fixture, MassData};
 use std::alloc::Layout;
 use xmath::{
@@ -599,14 +599,15 @@ impl<T: Real, D> Body<T, D> {
 
     pub fn create_fixture<S: Shape<T> + 'static>(
         &mut self,
-        def: FixtureDef<T, D>,
+        def: FixtureDef<T, D, S>,
     ) -> &mut Fixture<T, D> {
         unsafe {
-            let child_count = def.shape.child_count();
+            let shape = Box::new(def.shape);
+            let child_count = shape.child_count();
             let fixture = Box::new(Fixture {
                 density: def.density,
                 body_ptr: self as *mut Body<T, D>,
-                shape: def.shape,
+                shape,
                 friction: def.friction,
                 restitution: def.restitution,
                 proxies: Vec::with_capacity(child_count),

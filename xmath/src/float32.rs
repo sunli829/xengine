@@ -2,7 +2,7 @@ use crate::{Real, RealConstants, RealConverter};
 
 impl Real for f32 {
     fn is_valid(&self) -> bool {
-        f32::is_normal(*self)
+        f32::is_normal(*self) || *self == 0.0
     }
 
     fn abs(self) -> Self {
