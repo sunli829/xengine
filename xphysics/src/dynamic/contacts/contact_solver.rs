@@ -7,35 +7,35 @@ use xmath::{
 
 const BLOCK_SOLVE: bool = true;
 
-struct VelocityConstraintPoint<T> {
-    ra: Vector2<T>,
-    rb: Vector2<T>,
-    normal_impulse: T,
-    tangent_impulse: T,
-    normal_mass: T,
-    tangent_mass: T,
-    velocity_bias: T,
+pub struct VelocityConstraintPoint<T> {
+    pub ra: Vector2<T>,
+    pub rb: Vector2<T>,
+    pub normal_impulse: T,
+    pub tangent_impulse: T,
+    pub normal_mass: T,
+    pub tangent_mass: T,
+    pub velocity_bias: T,
 }
 
-struct ContactVelocityConstraint<T> {
-    points: [VelocityConstraintPoint<T>; settings::MAX_MANIFOLD_POINTS],
-    normal: Vector2<T>,
-    normal_mass: Matrix22<T>,
-    k: Matrix22<T>,
-    index_a: usize,
-    index_b: usize,
-    inv_mass_a: T,
-    inv_mass_b: T,
-    inv_i_a: T,
-    inv_i_b: T,
-    friction: T,
-    restitution: T,
-    tangent_speed: T,
-    point_count: usize,
-    contact_index: usize,
+pub struct ContactVelocityConstraint<T> {
+    pub points: [VelocityConstraintPoint<T>; settings::MAX_MANIFOLD_POINTS],
+    pub normal: Vector2<T>,
+    pub normal_mass: Matrix22<T>,
+    pub k: Matrix22<T>,
+    pub index_a: usize,
+    pub index_b: usize,
+    pub inv_mass_a: T,
+    pub inv_mass_b: T,
+    pub inv_i_a: T,
+    pub inv_i_b: T,
+    pub friction: T,
+    pub restitution: T,
+    pub tangent_speed: T,
+    pub point_count: usize,
+    pub contact_index: usize,
 }
 
-struct ContactPositionConstraint<T> {
+pub struct ContactPositionConstraint<T> {
     local_points: [Vector2<T>; settings::MAX_MANIFOLD_POINTS],
     local_normal: Vector2<T>,
     local_point: Vector2<T>,
@@ -54,19 +54,19 @@ struct ContactPositionConstraint<T> {
 }
 
 pub struct ContactSolverDef<'a, T, D> {
-    step: TimeStep<T>,
-    contacts: &'a mut [&'a mut Contact<T, D>],
-    positions: &'a mut [Position<T>],
-    velocities: &'a mut [Velocity<T>],
+    pub step: TimeStep<T>,
+    pub contacts: &'a [*mut Contact<T, D>],
+    pub positions: &'a mut [Position<T>],
+    pub velocities: &'a mut [Velocity<T>],
 }
 
 pub struct ContactSolver<'a, T, D> {
-    step: TimeStep<T>,
-    positions: &'a mut [Position<T>],
-    velocities: &'a mut [Velocity<T>],
-    position_constraints: Vec<ContactPositionConstraint<T>>,
-    velocity_constraints: Vec<ContactVelocityConstraint<T>>,
-    contacts: &'a mut [&'a mut Contact<T, D>],
+    pub step: TimeStep<T>,
+    pub positions: &'a mut [Position<T>],
+    pub velocities: &'a mut [Velocity<T>],
+    pub position_constraints: Vec<ContactPositionConstraint<T>>,
+    pub velocity_constraints: Vec<ContactVelocityConstraint<T>>,
+    pub contacts: &'a [*mut Contact<T, D>],
 }
 
 impl<'a, T: Real, D> ContactSolver<'a, T, D> {
@@ -79,7 +79,7 @@ impl<'a, T: Real, D> ContactSolver<'a, T, D> {
         velocity_constraints.resize_with(def.contacts.len(), || unsafe { std::mem::zeroed() });
 
         for i in 0..def.contacts.len() {
-            let contact = &mut def.contacts[i];
+            let contact = unsafe { def.contacts[i].as_ref().unwrap() };
             let fixture_a = contact.fixture_a();
             let fixture_b = contact.fixture_b();
             let shape_a = fixture_a.shape();
@@ -134,14 +134,14 @@ impl<'a, T: Real, D> ContactSolver<'a, T, D> {
         }
     }
 
-    fn initialize_velocity_constraints(&mut self) {
+    pub fn initialize_velocity_constraints(&mut self) {
         for i in 0..self.contacts.len() {
             let vc = &mut self.velocity_constraints[i];
             let pc = &mut self.position_constraints[i];
 
             let radius_a = pc.radius_a;
             let radius_b = pc.radius_b;
-            let manifold = self.contacts[vc.contact_index].manifold();
+            let manifold = unsafe { self.contacts[vc.contact_index].as_ref().unwrap().manifold() };
 
             let index_a = vc.index_a;
             let index_b = vc.index_b;
@@ -458,7 +458,12 @@ impl<'a, T: Real, D> ContactSolver<'a, T, D> {
     pub fn store_impulses(&mut self) {
         for i in 0..self.contacts.len() {
             let vc = &self.velocity_constraints[i];
-            let manifold = self.contacts[vc.contact_index].manifold_mut();
+            let manifold = unsafe {
+                self.contacts[vc.contact_index]
+                    .as_mut()
+                    .unwrap()
+                    .manifold_mut()
+            };
 
             for j in 0..vc.point_count {
                 manifold.points[j].normal_impulse = vc.points[j].normal_impulse;
@@ -544,7 +549,7 @@ impl<'a, T: Real, D> ContactSolver<'a, T, D> {
         min_separation >= -T::from_i32(3) * settings::linear_slop()
     }
 
-    fn solve_toi_position_constraints(&mut self, toi_index_a: usize, toi_index_b: usize) -> bool {
+    pub fn solve_toi_position_constraints(&mut self, toi_index_a: usize, toi_index_b: usize) -> bool {
         let mut min_separation = T::zero();
 
         for i in 0..self.contacts.len() {

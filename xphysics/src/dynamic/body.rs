@@ -1,7 +1,10 @@
 use crate::dynamic::contacts::ContactEdge;
-use crate::dynamic::world::WorldInner;
+use crate::dynamic::fixture::FixtureDef;
+use crate::dynamic::world::{WorldFlags, WorldInner};
 use crate::shapes::Shape;
-use crate::{Fixture, FixtureBuilder, MassData};
+use crate::{Fixture, MassData};
+use bitflags::_core::alloc::Layout;
+use bitflags::_core::future::Future;
 use xmath::{
     CrossTrait, DotTrait, Multiply, Real, Rotation, Sweep, Transform, TransposeMultiply, Vector2,
 };
@@ -31,7 +34,7 @@ pub struct BodyDef<T, D> {
 }
 
 bitflags! {
-    struct BodyFlags: u32 {
+    pub struct BodyFlags: u32 {
         const ISLAND = 0x0001;
         const AWAKE = 0x0002;
         const AUTO_SLEEP = 0x0004;
@@ -44,38 +47,148 @@ bitflags! {
 }
 
 pub struct Body<T, D> {
-    type_: BodyType,
-    flags: BodyFlags,
+    pub(crate) world_ptr: *mut WorldInner<T, D>,
+    pub(crate) type_: BodyType,
+    pub(crate) flags: BodyFlags,
     pub(crate) island_index: usize,
-    xf: Transform<T>,
+    pub(crate) xf: Transform<T>,
     pub(crate) sweep: Sweep<T>,
-    linear_velocity: Vector2<T>,
-    angular_velocity: T,
-    force: Vector2<T>,
-    torque: T,
-    world: *mut WorldInner<T, D>,
-    prev: *mut Body<T, D>,
-    next: *mut Body<T, D>,
-    fixture_list: Vec<Box<Fixture<T, D>>>,
-    contact_list: *mut ContactEdge<T, D>,
-    mass: T,
+    pub(crate) linear_velocity_: Vector2<T>,
+    pub(crate) angular_velocity_: T,
+    pub(crate) force: Vector2<T>,
+    pub(crate) torque: T,
+    pub(crate) prev_ptr: *mut Body<T, D>,
+    pub(crate) next_ptr: *mut Body<T, D>,
+    pub(crate) fixture_list: Vec<Box<Fixture<T, D>>>,
+    pub(crate) contact_list_ptr: *mut ContactEdge<T, D>,
+    pub(crate) mass: T,
     pub(crate) inv_mass: T,
-    i: T,
+    pub(crate) i: T,
     pub(crate) inv_i: T,
-    linear_damping: T,
-    angular_damping: T,
-    gravity_scale: T,
-    sleep_time: T,
-    data: D,
+    pub(crate) linear_damping: T,
+    pub(crate) angular_damping: T,
+    pub(crate) gravity_scale: T,
+    pub(crate) sleep_time: T,
+    pub(crate) data: D,
 }
 
 impl<T: Real, D> Body<T, D> {
+    pub(crate) fn new(world_ptr: *mut WorldInner<T, D>, def: BodyDef<T, D>) -> Body<T, D> {
+        assert!(def.position.is_valid());
+        assert!(def.linear_velocity.is_valid());
+        assert!(def.angle.is_valid());
+        assert!(def.angular_velocity.is_valid());
+        assert!(def.angular_damping.is_valid() && def.angular_damping >= T::zero());
+        assert!(def.linear_damping.is_valid() && def.linear_damping >= T::zero());
+
+        let mut flags = BodyFlags::DEBUG_DRAW;
+
+        if def.bullet {
+            flags.insert(BodyFlags::BULLET);
+        }
+
+        if def.fixed_rotation {
+            flags.insert(BodyFlags::FIXED_ROTATION);
+        }
+
+        if def.allow_sleep {
+            flags.insert(BodyFlags::AUTO_SLEEP);
+        }
+
+        if def.awake {
+            flags.insert(BodyFlags::AWAKE);
+        }
+
+        if def.active {
+            flags.insert(BodyFlags::ACTIVE);
+        }
+
+        let (mass, inv_mass) = if def.type_ == BodyType::Dynamic {
+            (T::one(), T::one())
+        } else {
+            (T::zero(), T::zero())
+        };
+
+        Body {
+            world_ptr,
+            type_: def.type_,
+            flags,
+            island_index: 0,
+            xf: Transform::new(def.position, Rotation::new(def.angle)),
+            sweep: Sweep {
+                local_center: Vector2::zero(),
+                c0: def.position,
+                c: def.position,
+                a0: def.angle,
+                a: def.angle,
+                alpha0: T::zero(),
+            },
+            linear_velocity_: def.linear_velocity,
+            angular_velocity_: def.angular_velocity,
+            force: Vector2::zero(),
+            torque: T::zero(),
+            prev_ptr: std::ptr::null_mut(),
+            next_ptr: std::ptr::null_mut(),
+            fixture_list: Vec::new(),
+            contact_list_ptr: std::ptr::null_mut(),
+            mass,
+            inv_mass,
+            i: T::zero(),
+            inv_i: T::zero(),
+            linear_damping: def.linear_damping,
+            angular_damping: def.angular_damping,
+            gravity_scale: def.gravity_scale,
+            sleep_time: T::zero(),
+            data: def.data,
+        }
+    }
+
+    pub fn destroy(&mut self) {
+        unsafe {
+            assert!(!(*self.world_ptr).flags.contains(WorldFlags::LOCKED));
+
+            let mut ce = self.contact_list_ptr;
+            while !ce.is_null() {
+                let ce0 = ce;
+                ce = (*ce).next_ptr;
+                (*self.world_ptr)
+                    .contact_manager
+                    .destroy((*ce0).contact_ptr);
+            }
+
+            for f in &mut self.fixture_list {
+                if let Some(l) = &(*self.world_ptr).destruction_listener {
+                    l.fixture_destroyed(f.as_ref());
+                }
+                f.destroy_proxies(&mut (*self.world_ptr).contact_manager.broad_phase);
+            }
+
+            if !self.prev_ptr.is_null() {
+                (*self.prev_ptr).next_ptr = self.next_ptr;
+            }
+            if !self.next_ptr.is_null() {
+                (*self.next_ptr).prev_ptr = self.prev_ptr;
+            }
+            if self as *mut Body<T, D> == (*self.world_ptr).body_list {
+                (*self.world_ptr).body_list = self.next_ptr;
+            }
+
+            std::ptr::drop_in_place(self);
+            std::alloc::dealloc(
+                self as *mut Body<T, D> as *mut u8,
+                Layout::new::<Body<T, D>>(),
+            );
+
+            (*self.world_ptr).body_count -= 1;
+        }
+    }
+
     pub(crate) fn world_mut(&mut self) -> &mut WorldInner<T, D> {
-        unsafe { self.world.as_mut().unwrap() }
+        unsafe { self.world_ptr.as_mut().unwrap() }
     }
 
     pub(crate) fn world(&self) -> &WorldInner<T, D> {
-        unsafe { self.world.as_ref().unwrap() }
+        unsafe { self.world_ptr.as_ref().unwrap() }
     }
 
     pub fn body_type(&self) -> BodyType {
@@ -109,11 +222,11 @@ impl<T: Real, D> Body<T, D> {
         if v.dot(v) > T::zero() {
             self.set_awake(true);
         }
-        self.linear_velocity = v;
+        self.linear_velocity_ = v;
     }
 
     pub fn linear_velocity(&self) -> &Vector2<T> {
-        &self.linear_velocity
+        &self.linear_velocity_
     }
 
     pub fn set_angular_velocity(&mut self, w: T) {
@@ -123,11 +236,11 @@ impl<T: Real, D> Body<T, D> {
         if w * w > T::zero() {
             self.set_awake(true);
         }
-        self.angular_velocity = w;
+        self.angular_velocity_ = w;
     }
 
     pub fn angular_velocity(&self) -> T {
-        self.angular_velocity
+        self.angular_velocity_
     }
 
     pub fn apply_force(&mut self, force: Vector2<T>, point: Vector2<T>, wake: bool) {
@@ -183,8 +296,8 @@ impl<T: Real, D> Body<T, D> {
         }
 
         if self.flags.contains(BodyFlags::AWAKE) {
-            self.linear_velocity += impulse * self.inv_mass;
-            self.angular_velocity += self.inv_i * (point - self.sweep.c).cross(impulse);
+            self.linear_velocity_ += impulse * self.inv_mass;
+            self.angular_velocity_ += self.inv_i * (point - self.sweep.c).cross(impulse);
         }
     }
 
@@ -198,7 +311,7 @@ impl<T: Real, D> Body<T, D> {
         }
 
         if self.flags.contains(BodyFlags::AWAKE) {
-            self.linear_velocity += impulse * self.inv_mass;
+            self.linear_velocity_ += impulse * self.inv_mass;
         }
     }
 
@@ -212,7 +325,7 @@ impl<T: Real, D> Body<T, D> {
         }
 
         if self.flags.contains(BodyFlags::AWAKE) {
-            self.angular_velocity += impulse * self.inv_i;
+            self.angular_velocity_ += impulse * self.inv_i;
         }
     }
 
@@ -230,7 +343,18 @@ impl<T: Real, D> Body<T, D> {
     }
 
     pub(crate) fn synchronize_fixtures(&mut self) {
-        unimplemented!()
+        let r = Rotation::new(self.sweep.a0);
+        let xf1 = Transform {
+            q: r,
+            p: self.sweep.c0 - r.multiply(self.sweep.local_center),
+        };
+
+        unsafe {
+            let broad_phase = &mut (*self.world_ptr).contact_manager.broad_phase;
+            for f in &mut self.fixture_list {
+                f.synchronize(broad_phase, &xf1, &self.xf);
+            }
+        }
     }
 
     pub fn mass(&self) -> T {
@@ -266,7 +390,7 @@ impl<T: Real, D> Body<T, D> {
     }
 
     pub fn linear_velocity_from_world_point(&self, world_point: Vector2<T>) -> Vector2<T> {
-        self.linear_velocity + self.angular_velocity.cross(world_point - self.sweep.c)
+        self.linear_velocity_ + self.angular_velocity_.cross(world_point - self.sweep.c)
     }
 
     pub fn linear_velocity_from_local_point(&self, local_point: Vector2<T>) -> Vector2<T> {
@@ -306,7 +430,44 @@ impl<T: Real, D> Body<T, D> {
     }
 
     pub fn set_body_type(&mut self, type_: BodyType) {
-        self.type_ = type_;
+        unsafe {
+            assert!(!(*self.world_ptr).flags.contains(WorldFlags::LOCKED));
+            if self.type_ == type_ {
+                return;
+            }
+            self.type_ = type_;
+            self.reset_mass();
+
+            if self.type_ == BodyType::Static {
+                self.linear_velocity_ = Vector2::zero();
+                self.angular_velocity_ = T::zero();
+                self.sweep.a0 = self.sweep.a;
+                self.sweep.c0 = self.sweep.c;
+                self.synchronize_fixtures();
+            }
+
+            self.set_awake(true);
+
+            self.force = Vector2::zero();
+            self.torque = T::zero();
+
+            let mut ce = self.contact_list_ptr;
+            while !ce.is_null() {
+                let ce0 = ce;
+                ce = (*ce).next_ptr;
+                (*self.world_ptr)
+                    .contact_manager
+                    .destroy((*ce0).contact_ptr);
+            }
+            self.contact_list_ptr = std::ptr::null_mut();
+
+            let broad_phase = &mut (*self.world_ptr).contact_manager.broad_phase;
+            for f in &mut self.fixture_list {
+                for proxy in &f.proxies {
+                    broad_phase.touch_proxy(proxy.proxy_id);
+                }
+            }
+        }
     }
 
     pub fn set_bullet(&mut self, flag: bool) {
@@ -324,8 +485,8 @@ impl<T: Real, D> Body<T, D> {
         } else {
             self.flags.remove(BodyFlags::AWAKE);
             self.sleep_time = T::zero();
-            self.linear_velocity = Vector2::zero();
-            self.angular_velocity = T::zero();
+            self.linear_velocity_ = Vector2::zero();
+            self.angular_velocity_ = T::zero();
             self.force = Vector2::zero();
             self.torque = T::zero();
         }
@@ -362,10 +523,6 @@ impl<T: Real, D> Body<T, D> {
 
     pub fn get_fixture_list(&self) -> &[Box<Fixture<T, D>>] {
         &self.fixture_list
-    }
-
-    pub(crate) fn get_contact_list(&self) -> *mut ContactEdge<T, D> {
-        self.contact_list
     }
 
     fn reset_mass(&mut self) {
@@ -418,19 +575,48 @@ impl<T: Real, D> Body<T, D> {
         self.sweep.c0 = self.xf.multiply(self.sweep.local_center);
         self.sweep.c = self.sweep.c0;
 
-        self.linear_velocity += self.angular_velocity.cross(self.sweep.c - old_center);
+        self.linear_velocity_ += self.angular_velocity_.cross(self.sweep.c - old_center);
+    }
+
+    pub(crate) fn should_collide(&self, other: &Body<T, D>) -> bool {
+        match (self.type_, other.type_) {
+            (BodyType::Dynamic, BodyType::Dynamic) => true,
+            _ => false,
+        }
     }
 
     pub fn create_fixture<S: Shape<T> + 'static>(
         &mut self,
-        shape: S,
-        density: T,
-    ) -> FixtureBuilder<T, D> {
-        FixtureBuilder::new(self, shape, density)
-    }
+        def: FixtureDef<T, D>,
+    ) -> &mut Fixture<T, D> {
+        unsafe {
+            let child_count = def.shape.child_count();
+            let fixture = Box::new(Fixture {
+                density: def.density,
+                body_ptr: self as *mut Body<T, D>,
+                shape: def.shape,
+                friction: def.friction,
+                restitution: def.restitution,
+                proxies: Vec::with_capacity(child_count),
+                filter: def.filter,
+                is_sensor: def.is_sensor,
+                data: def.data,
+            });
+            self.fixture_list.push(fixture);
 
-    pub(crate) fn add_fixture(&mut self, fixture: Box<Fixture<T, D>>) -> &mut Fixture<T, D> {
-        self.fixture_list.push(fixture);
-        self.fixture_list.last_mut().unwrap()
+            let fixture = (self.fixture_list.last_mut().unwrap() as *mut Fixture<T, D>)
+                .as_mut()
+                .unwrap();
+            if self.flags.contains(BodyFlags::ACTIVE) {
+                fixture.create_proxies(&mut (*self.world_ptr).contact_manager.broad_phase, self.xf);
+            }
+
+            if fixture.density > T::zero() {
+                self.reset_mass();
+            }
+
+            (*self.world_ptr).flags.insert(WorldFlags::NEW_FIXTURE);
+            fixture
+        }
     }
 }

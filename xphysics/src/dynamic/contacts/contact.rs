@@ -1,6 +1,7 @@
 use crate::shapes::{Chain, Circle, Edge, Polygon, Shape, ShapeType};
 use crate::{collision, settings, test_overlap};
 use crate::{Body, Fixture, Manifold, WorldManifold};
+use bitflags::_core::alloc::Layout;
 use xmath::{Real, Transform};
 
 #[inline]
@@ -14,14 +15,14 @@ fn mix_restitution<T: Real>(restitution1: T, restitution2: T) -> T {
 }
 
 pub struct ContactEdge<T, D> {
-    pub other: *mut Body<T, D>,
-    pub contact: *mut Contact<T, D>,
-    pub prev: *mut ContactEdge<T, D>,
-    pub next: *mut ContactEdge<T, D>,
+    pub other_ptr: *mut Body<T, D>,
+    pub contact_ptr: *mut Contact<T, D>,
+    pub prev_ptr: *mut ContactEdge<T, D>,
+    pub next_ptr: *mut ContactEdge<T, D>,
 }
 
 bitflags! {
-    struct ContactFlags: u32 {
+    pub struct ContactFlags: u32 {
         const ISLAND = 0x0001;
         const TOUCHING = 0x0002;
         const ENABLED = 0x0004;
@@ -37,14 +38,14 @@ pub struct ContactImpulse<T> {
     pub count: usize,
 }
 
-pub trait ContactListener<T, D>: 'static {
-    fn begin_contact(&mut self, _contact: &mut Contact<T, D>) {}
-    fn end_contact(&mut self, _contact: &mut Contact<T, D>) {}
-    fn pre_solve(&mut self, _contact: &mut Contact<T, D>, _old_manifold: &Manifold<T>) {}
-    fn post_solve(&mut self, _contact: &mut Contact<T, D>, _impulse: &ContactImpulse<T>) {}
+pub trait ContactListener<T, D> {
+    fn begin_contact(&self, _contact: &mut Contact<T, D>) {}
+    fn end_contact(&self, _contact: &mut Contact<T, D>) {}
+    fn pre_solve(&self, _contact: &mut Contact<T, D>, _old_manifold: &Manifold<T>) {}
+    fn post_solve(&self, _contact: &mut Contact<T, D>, _impulse: &ContactImpulse<T>) {}
 }
 
-pub trait ContactFilter<T, D>: 'static {
+pub trait ContactFilter<T, D> {
     fn should_collide(&self, fixture_a: &Fixture<T, D>, fixture_b: &Fixture<T, D>) -> bool;
 }
 
@@ -65,22 +66,22 @@ impl<T: Real, D> ContactFilter<T, D> for DefaultContactFilter {
 }
 
 pub struct Contact<T, D> {
-    flags: ContactFlags,
-    prev: *mut Contact<T, D>,
-    next: *mut Contact<T, D>,
-    node_a: ContactEdge<T, D>,
-    node_b: ContactEdge<T, D>,
-    fixture_a: *mut Fixture<T, D>,
-    fixture_b: *mut Fixture<T, D>,
-    index_a: usize,
-    index_b: usize,
-    manifold: Manifold<T>,
-    toi_count: usize,
-    toi: T,
-    friction: T,
-    restitution: T,
-    tangent_speed: T,
-    evaluate_fn: fn(
+    pub(crate) flags: ContactFlags,
+    pub(crate) prev_ptr: *mut Contact<T, D>,
+    pub(crate) next_ptr: *mut Contact<T, D>,
+    pub(crate) node_a: ContactEdge<T, D>,
+    pub(crate) node_b: ContactEdge<T, D>,
+    pub(crate) fixture_a_ptr: *mut Fixture<T, D>,
+    pub(crate) fixture_b_ptr: *mut Fixture<T, D>,
+    pub(crate) index_a: usize,
+    pub(crate) index_b: usize,
+    pub(crate) manifold: Manifold<T>,
+    pub(crate) toi_count: usize,
+    pub(crate) toi: T,
+    pub(crate) friction: T,
+    pub(crate) restitution: T,
+    pub(crate) tangent_speed: T,
+    pub(crate) evaluate_fn: fn(
         manifold: &mut Manifold<T>,
         shape_a: &dyn Shape<T>,
         shape_b: &dyn Shape<T>,
@@ -92,30 +93,30 @@ pub struct Contact<T, D> {
 }
 
 impl<T: Real, D> Contact<T, D> {
-    fn new(
+    pub fn new(
         fixture_a: *mut Fixture<T, D>,
         index_a: usize,
         fixture_b: *mut Fixture<T, D>,
         index_b: usize,
-    ) -> Option<Contact<T, D>> {
+    ) -> *mut Contact<T, D> {
         let contact = Contact {
             flags: ContactFlags::ENABLED,
-            prev: std::ptr::null_mut(),
-            next: std::ptr::null_mut(),
+            prev_ptr: std::ptr::null_mut(),
+            next_ptr: std::ptr::null_mut(),
             node_a: ContactEdge {
-                other: std::ptr::null_mut(),
-                contact: std::ptr::null_mut(),
-                prev: std::ptr::null_mut(),
-                next: std::ptr::null_mut(),
+                other_ptr: std::ptr::null_mut(),
+                contact_ptr: std::ptr::null_mut(),
+                prev_ptr: std::ptr::null_mut(),
+                next_ptr: std::ptr::null_mut(),
             },
             node_b: ContactEdge {
-                other: std::ptr::null_mut(),
-                contact: std::ptr::null_mut(),
-                prev: std::ptr::null_mut(),
-                next: std::ptr::null_mut(),
+                other_ptr: std::ptr::null_mut(),
+                contact_ptr: std::ptr::null_mut(),
+                prev_ptr: std::ptr::null_mut(),
+                next_ptr: std::ptr::null_mut(),
             },
-            fixture_a,
-            fixture_b,
+            fixture_a_ptr: fixture_a,
+            fixture_b_ptr: fixture_b,
             index_a,
             index_b,
             manifold: unsafe { std::mem::zeroed() },
@@ -238,11 +239,27 @@ impl<T: Real, D> Contact<T, D> {
                             )
                         }
                     }
-                    _ => return None,
+                    _ => return std::ptr::null_mut(),
                 }
             },
         };
-        Some(contact)
+
+        unsafe {
+            let data = std::alloc::alloc(Layout::new::<Contact<T, D>>());
+            std::ptr::copy_nonoverlapping(
+                &contact as *const Contact<T, D>,
+                data as *mut Contact<T, D>,
+                std::mem::size_of::<Contact<T, D>>(),
+            );
+            data as *mut Contact<T, D>
+        }
+    }
+
+    pub fn destroy(contact: *mut Contact<T, D>) {
+        unsafe {
+            std::ptr::drop_in_place::<Contact<T, D>>(contact);
+            std::alloc::dealloc(contact as *mut u8, Layout::new::<Contact<T, D>>());
+        }
     }
 
     pub fn manifold(&self) -> &Manifold<T> {
@@ -255,10 +272,10 @@ impl<T: Real, D> Contact<T, D> {
 
     pub fn world_manifold(&self) -> WorldManifold<T> {
         unsafe {
-            let body_a = (*self.fixture_a).body();
-            let body_b = (*self.fixture_b).body();
-            let shape_a = (*self.fixture_a).shape();
-            let shape_b = (*self.fixture_b).shape();
+            let body_a = (*self.fixture_a_ptr).body();
+            let body_b = (*self.fixture_b_ptr).body();
+            let shape_a = (*self.fixture_a_ptr).shape();
+            let shape_b = (*self.fixture_b_ptr).shape();
             WorldManifold::new(
                 &self.manifold,
                 body_a.transform(),
@@ -282,15 +299,15 @@ impl<T: Real, D> Contact<T, D> {
     }
 
     pub fn next(&self) -> &Contact<T, D> {
-        unsafe { self.next.as_ref().unwrap() }
+        unsafe { self.next_ptr.as_ref().unwrap() }
     }
 
     pub fn fixture_a(&self) -> &Fixture<T, D> {
-        unsafe { self.fixture_a.as_ref().unwrap() }
+        unsafe { self.fixture_a_ptr.as_ref().unwrap() }
     }
 
     pub fn fixture_a_mut(&self) -> &mut Fixture<T, D> {
-        unsafe { self.fixture_a.as_mut().unwrap() }
+        unsafe { self.fixture_a_ptr.as_mut().unwrap() }
     }
 
     pub fn child_index_a(&self) -> usize {
@@ -298,11 +315,11 @@ impl<T: Real, D> Contact<T, D> {
     }
 
     pub fn fixture_b(&self) -> &Fixture<T, D> {
-        unsafe { self.fixture_b.as_ref().unwrap() }
+        unsafe { self.fixture_b_ptr.as_ref().unwrap() }
     }
 
     pub fn fixture_b_mut(&self) -> &mut Fixture<T, D> {
-        unsafe { self.fixture_b.as_mut().unwrap() }
+        unsafe { self.fixture_b_ptr.as_mut().unwrap() }
     }
 
     pub fn child_index_b(&self) -> usize {
@@ -318,8 +335,12 @@ impl<T: Real, D> Contact<T, D> {
     }
 
     pub fn reset_friction(&mut self) {
-        self.friction =
-            unsafe { mix_friction((*self.fixture_a).friction(), (*self.fixture_b).friction()) };
+        self.friction = unsafe {
+            mix_friction(
+                (*self.fixture_a_ptr).friction(),
+                (*self.fixture_b_ptr).friction(),
+            )
+        };
     }
 
     pub fn set_restitution(&mut self, restitution: T) {
@@ -333,8 +354,8 @@ impl<T: Real, D> Contact<T, D> {
     pub fn reset_restitution(&mut self) {
         self.friction = unsafe {
             mix_restitution(
-                (*self.fixture_a).restitution(),
-                (*self.fixture_b).restitution(),
+                (*self.fixture_a_ptr).restitution(),
+                (*self.fixture_b_ptr).restitution(),
             )
         };
     }
@@ -351,8 +372,8 @@ impl<T: Real, D> Contact<T, D> {
         unsafe {
             (self.evaluate_fn)(
                 &mut self.manifold,
-                (*self.fixture_a).shape(),
-                (*self.fixture_b).shape(),
+                (*self.fixture_a_ptr).shape(),
+                (*self.fixture_b_ptr).shape(),
                 xf_a,
                 xf_b,
                 self.index_a,
@@ -361,7 +382,7 @@ impl<T: Real, D> Contact<T, D> {
         }
     }
 
-    pub(crate) fn update<L: ContactListener<T, D>>(&mut self, mut listener: Option<&mut L>) {
+    pub(crate) fn update(&mut self, mut listener: &Option<Box<dyn ContactListener<T, D>>>) {
         unsafe {
             let old_manifold = self.manifold.clone();
 
@@ -370,18 +391,18 @@ impl<T: Real, D> Contact<T, D> {
             let touching;
             let was_touching = self.flags.contains(ContactFlags::TOUCHING);
 
-            let sensor_a = (*self.fixture_a).is_sensor();
-            let sensor_b = (*self.fixture_b).is_sensor();
+            let sensor_a = (*self.fixture_a_ptr).is_sensor();
+            let sensor_b = (*self.fixture_b_ptr).is_sensor();
             let sensor = sensor_a || sensor_b;
 
-            let body_a = (*self.fixture_a).body_mut();
-            let body_b = (*self.fixture_b).body_mut();
+            let body_a = (*self.fixture_a_ptr).body_mut();
+            let body_b = (*self.fixture_b_ptr).body_mut();
             let xf_a = body_a.transform();
             let xf_b = body_b.transform();
 
             if sensor {
-                let shape_a = (*self.fixture_a).shape();
-                let shape_b = (*self.fixture_b).shape();
+                let shape_a = (*self.fixture_a_ptr).shape();
+                let shape_b = (*self.fixture_b_ptr).shape();
                 touching = test_overlap(shape_a, self.index_a, shape_b, self.index_b, *xf_a, *xf_b);
                 self.manifold.point_count = 0;
             } else {

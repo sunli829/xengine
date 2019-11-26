@@ -14,6 +14,14 @@ pub(crate) struct BroadPhase<T, D> {
 }
 
 impl<T: Real, D> BroadPhase<T, D> {
+    pub fn new() -> BroadPhase<T, D> {
+        BroadPhase {
+            tree: DynamicTree::new(),
+            move_buffer: Default::default(),
+            pair_buffer: Default::default(),
+        }
+    }
+
     pub fn create_proxy(&mut self, aabb: AABB<T>, data: D) -> usize {
         let proxy_id = self.tree.create_proxy(aabb, data);
         self.buffer_move(proxy_id);
@@ -53,7 +61,7 @@ impl<T: Real, D> BroadPhase<T, D> {
         aabb_a.is_overlap(aabb_b)
     }
 
-    pub fn update_pairs<F: Fn(&D, &D)>(&mut self, cb: F) {
+    pub fn update_pairs<F: FnMut(&D, &D)>(&mut self, mut cb: F) {
         self.pair_buffer.clear();
 
         for id in &self.move_buffer {

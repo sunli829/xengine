@@ -19,8 +19,7 @@ impl Default for Filter {
     }
 }
 
-pub struct FixtureBuilder<'a, T, D> {
-    body: &'a mut Body<T, D>,
+pub struct FixtureDef<T, D> {
     pub shape: Box<dyn Shape<T> + 'static>,
     pub data: Option<D>,
     pub friction: T,
@@ -30,93 +29,32 @@ pub struct FixtureBuilder<'a, T, D> {
     pub filter: Filter,
 }
 
-impl<'a, T: Real, D> FixtureBuilder<'a, T, D> {
-    pub(crate) fn new<S: Shape<T> + 'static>(
-        body: &'a mut Body<T, D>,
-        shape: S,
-        density: T,
-    ) -> FixtureBuilder<'a, T, D> {
-        FixtureBuilder {
-            body,
-            shape: Box::new(shape),
-            data: None,
-            friction: T::two() * T::en1(),
-            restitution: T::zero(),
-            density,
-            is_sensor: false,
-            filter: Default::default(),
-        }
-    }
-
-    pub fn data(self, data: D) -> FixtureBuilder<'a, T, D> {
-        FixtureBuilder {
-            data: Some(data),
-            ..self
-        }
-    }
-
-    pub fn friction(self, friction: T) -> FixtureBuilder<'a, T, D> {
-        FixtureBuilder { friction, ..self }
-    }
-
-    pub fn restitution(self, restitution: T) -> FixtureBuilder<'a, T, D> {
-        FixtureBuilder {
-            restitution,
-            ..self
-        }
-    }
-
-    pub fn sensor(self, is_sensor: bool) -> FixtureBuilder<'a, T, D> {
-        FixtureBuilder { is_sensor, ..self }
-    }
-
-    pub fn filter(self, filter: Filter) -> FixtureBuilder<'a, T, D> {
-        FixtureBuilder { filter, ..self }
-    }
-
-    pub fn finish(self) -> &'a Fixture<T, D> {
-        let child_count = self.shape.child_count();
-        let fixture = Box::new(Fixture {
-            density: self.density,
-            body: self.body as *mut Body<T, D>,
-            shape: self.shape,
-            friction: self.friction,
-            restitution: self.restitution,
-            proxies: Vec::with_capacity(child_count),
-            filter: self.filter,
-            is_sensor: self.is_sensor,
-            data: self.data,
-        });
-        self.body.add_fixture(fixture)
-    }
-}
-
 pub(crate) struct FixtureProxy<T, D> {
     pub(crate) aabb: AABB<T>,
-    pub(crate) fixture: *mut Fixture<T, D>,
+    pub(crate) fixture_ptr: *mut Fixture<T, D>,
     pub(crate) child_index: usize,
     pub(crate) proxy_id: usize,
 }
 
 pub struct Fixture<T, D> {
-    density: T,
-    body: *mut Body<T, D>,
-    shape: Box<dyn Shape<T> + 'static>,
-    friction: T,
-    restitution: T,
-    proxies: Vec<Box<FixtureProxy<T, D>>>,
-    filter: Filter,
-    is_sensor: bool,
-    data: Option<D>,
+    pub(crate) density: T,
+    pub(crate) body_ptr: *mut Body<T, D>,
+    pub(crate) shape: Box<dyn Shape<T> + 'static>,
+    pub(crate) friction: T,
+    pub(crate) restitution: T,
+    pub(crate) proxies: Vec<Box<FixtureProxy<T, D>>>,
+    pub(crate) filter: Filter,
+    pub(crate) is_sensor: bool,
+    pub(crate) data: Option<D>,
 }
 
 impl<T: Real, D> Fixture<T, D> {
     pub fn body_mut(&mut self) -> &mut Body<T, D> {
-        unsafe { self.body.as_mut().unwrap() }
+        unsafe { self.body_ptr.as_mut().unwrap() }
     }
 
     pub fn body(&self) -> &Body<T, D> {
-        unsafe { self.body.as_ref().unwrap() }
+        unsafe { self.body_ptr.as_ref().unwrap() }
     }
 
     pub fn shape(&self) -> &dyn Shape<T> {
@@ -208,15 +146,15 @@ impl<T: Real, D> Fixture<T, D> {
     pub(crate) fn create_proxies(
         &mut self,
         broad_phase: &mut BroadPhase<T, *mut FixtureProxy<T, D>>,
-        xf: &Transform<T>,
+        xf: Transform<T>,
     ) {
         self.proxies.clear();
         for i in 0..self.shape.child_count() {
-            let aabb = self.shape.compute_aabb(xf, i);
+            let aabb = self.shape.compute_aabb(&xf, i);
             let fixture_ptr = self as *mut Fixture<T, D>;
             let mut proxy = Box::new(FixtureProxy {
                 aabb,
-                fixture: fixture_ptr,
+                fixture_ptr: fixture_ptr,
                 child_index: i,
                 proxy_id: 0,
             });
