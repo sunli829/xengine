@@ -13,6 +13,6 @@ bitflags = "1.2.1"
 nvg = "0.5.3"
 nvg-gl = "0.5.0"
 gl = "0.14.0"
-glutin = "0.22.0-alpha4"
+glutin = "0.22.0-alpha5"
 rand = "0.7.2"
 xfixedpoint = { path = "../xfixedpoint" }

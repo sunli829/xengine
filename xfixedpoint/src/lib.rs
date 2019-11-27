@@ -208,13 +208,13 @@ impl Real for FP {
 
     fn signum(self) -> Self {
         if self == consts::POSITIVE_INFINITY || self >= consts::ZERO {
-            return FP::from_i32(1);
+            return FP::i32(1);
         } else if self == consts::NEGATIVE_INFINITY || self < consts::ZERO {
-            return FP::from_i32(-1);
+            return FP::i32(-1);
         } else if self == consts::NAN {
             return consts::NAN;
         } else {
-            return FP::from_i32(0);
+            return FP::i32(0);
         }
     }
 
@@ -273,7 +273,7 @@ impl Real for FP {
 
         let nearest_value = FP(TAN_LUT[rounded_index.to_i32() as usize]);
         let second_nearest_value = FP(TAN_LUT
-            [(rounded_index + FP::from_i32(index_error.signum().to_i32())).to_i32() as usize]);
+            [(rounded_index + FP::i32(index_error.signum().to_i32())).to_i32() as usize]);
 
         let delta = (index_error * (nearest_value - second_nearest_value).abs()).0;
         let interpolated_value = nearest_value.0 + delta;
@@ -302,10 +302,10 @@ impl Real for FP {
             flip = true;
         }
 
-        let raw_index = value * FP::from_i32(LUT_SIZE as i32);
+        let raw_index = value * FP::i32(LUT_SIZE as i32);
         let mut rounded_index = raw_index.round();
-        if rounded_index >= FP::from_i32(LUT_SIZE as i32) {
-            rounded_index = FP::from_i32(LUT_SIZE as i32 - 1);
+        if rounded_index >= FP::i32(LUT_SIZE as i32) {
+            rounded_index = FP::i32(LUT_SIZE as i32 - 1);
         }
 
         let index_error = raw_index - rounded_index;
@@ -586,11 +586,11 @@ impl RealConverter for FP {
         (self.0 >> FRACTIONAL_PLACES) as i32
     }
 
-    fn from_f32(value: f32) -> Self {
+    fn f32(value: f32) -> Self {
         FP((value * (ONE as f32)) as i64)
     }
 
-    fn from_i32(value: i32) -> Self {
+    fn i32(value: i32) -> Self {
         FP(value as i64 * ONE)
     }
 }
@@ -747,9 +747,9 @@ impl FP {
 
         if x == consts::ONE {
             if neg {
-                return consts::ONE / FP::from_i32(2);
+                return consts::ONE / FP::i32(2);
             } else {
-                return FP::from_i32(2);
+                return FP::i32(2);
             }
         }
         if x >= consts::LOG2MAX {
@@ -774,7 +774,7 @@ impl FP {
         let mut term = consts::ONE;
         let mut i = 1;
         while term.0 != 0 {
-            term = ((x * term) * consts::LN_2) / FP::from_i32(i);
+            term = ((x * term) * consts::LN_2) / FP::i32(i);
             result += term;
             i += 1;
         }

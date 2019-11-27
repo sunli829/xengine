@@ -12,22 +12,22 @@ pub fn aabb_extension<T: Real>() -> T {
 
 #[inline]
 pub fn aabb_multiplier<T: Real>() -> T {
-    T::from_i32(2)
+    T::i32(2)
 }
 
 #[inline]
 pub fn linear_slop<T: Real>() -> T {
-    T::en3() * T::from_i32(5)
+    T::en3() * T::i32(5)
 }
 
 #[inline]
 pub fn angular_slop<T: Real>() -> T {
-    (T::from_i32(2) / T::from_i32(180) * T::pi())
+    (T::i32(2) / T::i32(180) * T::pi())
 }
 
 #[inline]
 pub fn polygon_radius<T: Real>() -> T {
-    linear_slop::<T>() * T::from_i32(2)
+    linear_slop::<T>() * T::i32(2)
 }
 
 #[inline]
@@ -37,7 +37,7 @@ pub fn velocity_threshold<T: Real>() -> T {
 
 #[inline]
 pub fn max_linear_correction<T: Real>() -> T {
-    T::from_f32(0.2)
+    T::f32(0.2)
 }
 
 //#[inline]
@@ -67,12 +67,12 @@ pub fn max_rotation_squared<T: Real>() -> T {
 
 #[inline]
 pub fn baumgarte<T: Real>() -> T {
-    T::from_f32(0.2)
+    T::f32(0.2)
 }
 
 #[inline]
 pub fn toi_baugarte<T: Real>() -> T {
-    T::from_f32(0.75)
+    T::f32(0.75)
 }
 
 #[inline]
@@ -87,5 +87,5 @@ pub fn linear_sleep_tolerance<T: Real>() -> T {
 
 #[inline]
 pub fn angular_sleep_tolerance<T: Real>() -> T {
-    T::from_i32(2) / T::from_i32(180) * T::pi()
+    T::i32(2) / T::i32(180) * T::pi()
 }

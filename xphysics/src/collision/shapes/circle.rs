@@ -9,8 +9,15 @@ pub struct ShapeCircle<T> {
 }
 
 impl<T: Real> ShapeCircle<T> {
-    pub fn new(position: Vector2<T>, radius: T) -> ShapeCircle<T> {
-        ShapeCircle { position, radius }
+    pub fn new<P, R>(position: P, radius: R) -> ShapeCircle<T>
+    where
+        P: Into<Vector2<T>>,
+        R: Into<T>,
+    {
+        ShapeCircle {
+            position: position.into(),
+            radius: radius.into(),
+        }
     }
 }
 

@@ -13,7 +13,13 @@ pub struct ShapePolygon<T> {
 }
 
 impl<T: Real> ShapePolygon<T> {
-    pub fn new_box_center(hx: T, hy: T) -> ShapePolygon<T> {
+    pub fn new_box_center<X, Y>(hx: X, hy: Y) -> ShapePolygon<T>
+    where
+        X: Into<T>,
+        Y: Into<T>,
+    {
+        let hx = hx.into();
+        let hy = hy.into();
         ShapePolygon {
             centroid: Vector2::zero(),
             vertices: [
@@ -40,10 +46,16 @@ impl<T: Real> ShapePolygon<T> {
         }
     }
 
-    pub fn new_box(&self, hx: T, hy: T, center: Vector2<T>, angle: T) -> ShapePolygon<T> {
+    pub fn new_box<X, Y, C, A>(hx: X, hy: Y, center: C, angle: A) -> ShapePolygon<T>
+    where
+        X: Into<T>,
+        Y: Into<T>,
+        C: Into<Vector2<T>>,
+        A: Into<T>,
+    {
         let mut polygon = Self::new_box_center(hx, hy);
 
-        let xf = Transform::new(center, Rotation::new(angle));
+        let xf = Transform::new(center.into(), Rotation::new(angle.into()));
 
         for i in 0..4 {
             polygon.vertices[i] = xf.multiply(polygon.vertices[i]);
@@ -58,7 +70,7 @@ impl<T: Real> ShapePolygon<T> {
 
         let mut c = Vector2::zero();
         let mut area = T::zero();
-        let inv3 = T::one() / T::from_i32(3);
+        let inv3 = T::one() / T::i32(3);
 
         for i in 0..vertices.len() {
             let p1 = Vector2::zero();
@@ -83,7 +95,12 @@ impl<T: Real> ShapePolygon<T> {
         c * (T::one() / area)
     }
 
-    pub fn new(vertices: &[Vector2<T>]) -> ShapePolygon<T> {
+    pub fn new<I, V>(vertices: I) -> ShapePolygon<T>
+    where
+        I: IntoIterator<Item = V>,
+        V: Into<Vector2<T>>,
+    {
+        let vertices = vertices.into_iter().map(|v| v.into()).collect::<Vec<_>>();
         assert!(3 <= vertices.len() && vertices.len() <= settings::MAX_POLYGON_VERTICES);
         if vertices.len() < 3 {
             return Self::new_box_center(T::one(), T::one());
@@ -290,9 +307,9 @@ impl<T: Real> Shape<T> for ShapePolygon<T> {
         for i in 0..self.count {
             s += self.vertices[i];
         }
-        s *= T::one() / T::from_i32(self.count as i32);
+        s *= T::one() / T::i32(self.count as i32);
 
-        let k_inv3 = T::one() / T::from_i32(3);
+        let k_inv3 = T::one() / T::i32(3);
 
         for i in 0..self.count {
             let e1 = self.vertices[i] - s;
@@ -317,7 +334,7 @@ impl<T: Real> Shape<T> for ShapePolygon<T> {
             let intx2 = ex1 * ex1 + ex2 * ex1 + ex2 * ex2;
             let inty2 = ey1 * ey1 + ey2 * ey1 + ey2 * ey2;
 
-            mass_i += (T::from_f32(0.25) * k_inv3 * d) * (intx2 + inty2);
+            mass_i += (T::f32(0.25) * k_inv3 * d) * (intx2 + inty2);
         }
 
         let mass = density * area;

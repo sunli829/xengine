@@ -72,7 +72,7 @@ pub trait DebugDraw {
 }
 
 pub(crate) struct WorldInner<T, D> {
-    pub(crate) bodies_slab: Slab<Body<T, D>>,
+    pub(crate) bodies_slab: Slab<Box<Body<T, D>>>,
     pub(crate) flags: WorldFlags,
     pub(crate) contact_manager: ContactManager<T, D>,
     pub(crate) body_list: *mut Body<T, D>,
@@ -180,25 +180,28 @@ impl<T: Real, D> World<T, D> {
     }
 
     pub fn body(&self, id: BodyId) -> Option<&Body<T, D>> {
-        self.0.bodies_slab.get(id.0)
+        self.0.bodies_slab.get(id.0).map(|body| body.as_ref())
     }
 
     pub fn body_mut(&mut self, id: BodyId) -> Option<&mut Body<T, D>> {
-        self.0.bodies_slab.get_mut(id.0)
+        self.0.bodies_slab.get_mut(id.0).map(|body| body.as_mut())
     }
 
     pub fn create_body(&mut self, def: BodyDef<T, D>) -> BodyId {
         unsafe {
             let world_ptr = self.0.as_mut() as *mut WorldInner<T, D>;
-            let id = self.0.bodies_slab.insert(Body::new(world_ptr, def));
+            let id = self
+                .0
+                .bodies_slab
+                .insert(Box::new(Body::new(world_ptr, def)));
             let body = self.0.bodies_slab.get_unchecked_mut(id);
 
             body.prev_ptr = std::ptr::null_mut();
             body.next_ptr = self.0.body_list;
             if !self.0.body_list.is_null() {
-                (*self.0.body_list).prev_ptr = body;
+                (*self.0.body_list).prev_ptr = body.as_mut();
             }
-            self.0.body_list = body;
+            self.0.body_list = body.as_mut();
             self.0.body_count += 1;
             BodyId(id)
         }
@@ -211,15 +214,18 @@ impl<T: Real, D> World<T, D> {
     ) -> BodyId {
         unsafe {
             let world_ptr = self.0.as_mut() as *mut WorldInner<T, D>;
-            let id = self.0.bodies_slab.insert(Body::new(world_ptr, def));
+            let id = self
+                .0
+                .bodies_slab
+                .insert(Box::new(Body::new(world_ptr, def)));
             let body = self.0.bodies_slab.get_unchecked_mut(id);
 
             body.prev_ptr = std::ptr::null_mut();
             body.next_ptr = self.0.body_list;
             if !self.0.body_list.is_null() {
-                (*self.0.body_list).prev_ptr = body;
+                (*self.0.body_list).prev_ptr = body.as_mut();
             }
-            self.0.body_list = body;
+            self.0.body_list = body.as_mut();
             self.0.body_count += 1;
 
             body.create_fixture(fixture_def);
@@ -239,15 +245,18 @@ impl<T: Real, D> World<T, D> {
     {
         unsafe {
             let world_ptr = self.0.as_mut() as *mut WorldInner<T, D>;
-            let id = self.0.bodies_slab.insert(Body::new(world_ptr, def));
+            let id = self
+                .0
+                .bodies_slab
+                .insert(Box::new(Body::new(world_ptr, def)));
             let body = self.0.bodies_slab.get_unchecked_mut(id);
 
             body.prev_ptr = std::ptr::null_mut();
             body.next_ptr = self.0.body_list;
             if !self.0.body_list.is_null() {
-                (*self.0.body_list).prev_ptr = body;
+                (*self.0.body_list).prev_ptr = body.as_mut();
             }
-            self.0.body_list = body;
+            self.0.body_list = body.as_mut();
             self.0.body_count += 1;
 
             for fixture_def in fixtures_def {
@@ -283,7 +292,7 @@ impl<T: Real, D> World<T, D> {
             if !body.next_ptr.is_null() {
                 (*body.next_ptr).prev_ptr = body.prev_ptr;
             }
-            if body as *mut Body<T, D> == self.0.body_list {
+            if body.as_mut() as *mut Body<T, D> == self.0.body_list {
                 self.0.body_list = body.next_ptr;
             }
 
@@ -784,7 +793,7 @@ impl<T: Real, D> World<T, D> {
                 if self.0.debug_draw_flags.contains(DebugDrawFlags::SHAPE) {
                     let mut b = self.0.body_list;
                     while !b.is_null() {
-                        if (*b).is_debug_draw() {
+                        if !(*b).is_debug_draw() {
                             b = (*b).next_ptr;
                             continue;
                         }

@@ -11,26 +11,31 @@ pub struct ShapeEdge<T> {
 }
 
 impl<T: Real> ShapeEdge<T> {
-    pub fn new(v1: Vector2<T>, v2: Vector2<T>) -> ShapeEdge<T> {
+    pub fn new<V1, V2>(v1: V1, v2: V2) -> ShapeEdge<T>
+    where
+        V1: Into<Vector2<T>>,
+        V2: Into<Vector2<T>>,
+    {
         ShapeEdge {
-            vertex1: v1,
-            vertex2: v2,
+            vertex1: v1.into(),
+            vertex2: v2.into(),
             vertex0: None,
             vertex3: None,
         }
     }
 
-    pub fn new_with_adjacent(
-        v1: Vector2<T>,
-        v2: Vector2<T>,
-        v0: Vector2<T>,
-        v3: Vector2<T>,
-    ) -> ShapeEdge<T> {
+    pub fn new_with_adjacent<V1, V2, V0, V3>(v1: V1, v2: V2, v0: V0, v3: V3) -> ShapeEdge<T>
+    where
+        V1: Into<Vector2<T>>,
+        V2: Into<Vector2<T>>,
+        V0: Into<Vector2<T>>,
+        V3: Into<Vector2<T>>,
+    {
         ShapeEdge {
-            vertex1: v1,
-            vertex2: v2,
-            vertex0: Some(v0),
-            vertex3: Some(v3),
+            vertex1: v1.into(),
+            vertex2: v2.into(),
+            vertex0: Some(v0.into()),
+            vertex3: Some(v3.into()),
         }
     }
 }

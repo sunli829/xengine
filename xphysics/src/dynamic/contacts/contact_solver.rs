@@ -236,7 +236,7 @@ impl<'a, T: Real, D> ContactSolver<'a, T, D> {
                 let k22 = ma + mb + ia * rn2a * rn2a + ib * rn2b * rn2b;
                 let k12 = ma + mb + ia * rn1a * rn2a + ib * rn1b * rn2b;
 
-                if k11 * k11 < T::from_i32(1000) * (k11 * k22 - k12 * k12) {
+                if k11 * k11 < T::i32(1000) * (k11 * k22 - k12 * k12) {
                     vc.k.ex = Vector2::new(k11, k12);
                     vc.k.ey = Vector2::new(k12, k22);
                     vc.normal_mass = vc.k.inverse();
@@ -548,7 +548,7 @@ impl<'a, T: Real, D> ContactSolver<'a, T, D> {
             self.positions[index_b].a = ab;
         }
 
-        min_separation >= -T::from_i32(3) * settings::linear_slop()
+        min_separation >= -T::i32(3) * settings::linear_slop()
     }
 
     pub fn solve_toi_position_constraints(
@@ -640,7 +640,7 @@ impl<'a, T: Real, D> ContactSolver<'a, T, D> {
             self.positions[index_b].a = ab;
         }
 
-        min_separation >= -T::from_f32(1.5) * settings::linear_slop::<T>()
+        min_separation >= -T::f32(1.5) * settings::linear_slop::<T>()
     }
 }
 

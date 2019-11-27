@@ -27,7 +27,7 @@ pub struct TestSetting<T> {
 impl<T: Real> Default for TestSetting<T> {
     fn default() -> Self {
         Self {
-            hz: T::from_f32(60.0),
+            hz: T::f32(60.0),
             velocity_iterations: 8,
             position_iterations: 3,
             draw_shapes: true,
@@ -49,23 +49,23 @@ impl<T: Real> Default for TestSetting<T> {
 }
 
 pub trait TestImpl<T> {
-    fn create(&mut self, world: &mut World<T, ()>);
+    fn new(world: &mut World<T, ()>) -> Self;
 }
 
-pub struct Test<T> {
+pub struct Test<T, I> {
     ctx: Rc<RefCell<nvg::Context<nvg_gl::Renderer>>>,
-    test_impl: Box<dyn TestImpl<T> + 'static>,
-    world: World<T, ()>,
+    test_impl: I,
+    pub world: World<T, ()>,
 }
 
-impl<T: Real> Test<T> {
-    pub fn new(mut test_impl: Box<dyn TestImpl<T> + 'static>) -> Test<T> {
-        let mut world = World::new(Vector2::new(T::from_f32(0.0), T::from_f32(-10.0)));
+impl<T: Real, I: TestImpl<T>> Test<T, I> {
+    pub fn new() -> Test<T, I> {
+        let mut world = World::new(Vector2::new(T::f32(0.0), T::f32(-10.0)));
+        let test_impl = I::new(&mut world);
         let ctx = Rc::new(RefCell::new(
             nvg::Context::create(nvg_gl::Renderer::create().unwrap()).unwrap(),
         ));
         world.set_debug_draw(NvgDebugDraw { ctx: ctx.clone() });
-        test_impl.create(&mut world);
         Test {
             ctx,
             test_impl,
@@ -73,8 +73,18 @@ impl<T: Real> Test<T> {
         }
     }
 
-    pub fn step(&mut self, settings: &mut TestSetting<T>) {
-        self.ctx.borrow_mut().begin_frame((1280, 800), 1.0).unwrap();
+    pub fn step(
+        &mut self,
+        settings: &mut TestSetting<T>,
+        device_pixel_ratio: f32,
+    ) {
+        self.ctx
+            .borrow_mut()
+            .begin_frame((40, 40), device_pixel_ratio)
+            .unwrap();
+        self.ctx
+            .borrow_mut()
+            .transform(nvg::Transform::translate(20.0, 20.0));
 
         let mut time_step = if settings.hz > T::zero() {
             T::one() / settings.hz

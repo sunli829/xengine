@@ -225,11 +225,11 @@ impl RealConverter for f32 {
         *self as i32
     }
 
-    fn from_f32(value: f32) -> Self {
+    fn f32(value: f32) -> Self {
         value
     }
 
-    fn from_i32(value: i32) -> Self {
+    fn i32(value: i32) -> Self {
         value as f32
     }
 }

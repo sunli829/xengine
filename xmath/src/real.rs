@@ -157,7 +157,7 @@ pub trait RealConverter {
 
     fn to_i32(&self) -> i32;
 
-    fn from_f32(value: f32) -> Self;
+    fn f32(value: f32) -> Self;
 
-    fn from_i32(value: i32) -> Self;
+    fn i32(value: i32) -> Self;
 }

@@ -22,7 +22,12 @@ impl<T: Real> ShapeChain<T> {
         }
     }
 
-    pub fn create_loop(mut vertices: Vec<Vector2<T>>) -> ShapeChain<T> {
+    pub fn create_loop<I, V>(vertices: I) -> ShapeChain<T>
+    where
+        I: IntoIterator<Item = V>,
+        V: Into<Vector2<T>>,
+    {
+        let mut vertices = vertices.into_iter().map(|v| v.into()).collect::<Vec<_>>();
         assert!(vertices.len() >= 3);
         Self::check_vertices(&vertices);
 
@@ -36,7 +41,12 @@ impl<T: Real> ShapeChain<T> {
         }
     }
 
-    pub fn create_chain(vertices: Vec<Vector2<T>>) -> ShapeChain<T> {
+    pub fn create_chain<I, V>(vertices: I) -> ShapeChain<T>
+    where
+        I: IntoIterator<Item = V>,
+        V: Into<Vector2<T>>,
+    {
+        let vertices = vertices.into_iter().map(|v| v.into()).collect::<Vec<_>>();
         assert!(vertices.len() >= 2);
         Self::check_vertices(&vertices);
 

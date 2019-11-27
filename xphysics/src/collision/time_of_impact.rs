@@ -231,8 +231,8 @@ pub fn time_of_impact<T: Real>(input: TOIInput<'_, T>) -> TOIOutput<T> {
 
     let total_radius = proxy_a.radius + proxy_b.radius;
     let target = settings::linear_slop::<T>()
-        .max(total_radius - T::from_i32(3) * settings::linear_slop::<T>());
-    let tolerance = T::from_f32(0.25) * settings::linear_slop::<T>();
+        .max(total_radius - T::i32(3) * settings::linear_slop::<T>());
+    let tolerance = T::f32(0.25) * settings::linear_slop::<T>();
     assert!(target > tolerance);
 
     let mut t1 = T::zero();

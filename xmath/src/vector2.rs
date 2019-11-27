@@ -220,3 +220,9 @@ impl<T: Real> DotTrait<Vector2<T>> for Vector2<T> {
         a.x * b.x + a.y * b.y
     }
 }
+
+impl<T> From<(T, T)> for Vector2<T> {
+    fn from((x, y): (T, T)) -> Self {
+        Vector2 { x, y }
+    }
+}
