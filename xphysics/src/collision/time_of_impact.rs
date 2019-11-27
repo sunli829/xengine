@@ -3,13 +3,14 @@ use crate::settings;
 use xmath::{CrossTrait, DotTrait, Multiply, Real, Sweep, Transform, TransposeMultiply, Vector2};
 
 pub struct TOIInput<'a, T: Real> {
-    proxy_a: &'a DistanceProxy<'a, T>,
-    proxy_b: &'a DistanceProxy<'a, T>,
-    sweep_a: Sweep<T>,
-    sweep_b: Sweep<T>,
-    max: T,
+    pub proxy_a: &'a DistanceProxy<'a, T>,
+    pub proxy_b: &'a DistanceProxy<'a, T>,
+    pub sweep_a: Sweep<T>,
+    pub sweep_b: Sweep<T>,
+    pub max: T,
 }
 
+#[derive(Eq, PartialEq, Copy, Clone)]
 pub enum TOIOutputState {
     Unknown,
     Failed,
@@ -19,8 +20,8 @@ pub enum TOIOutputState {
 }
 
 pub struct TOIOutput<T> {
-    state: TOIOutputState,
-    t: T,
+    pub state: TOIOutputState,
+    pub t: T,
 }
 
 enum SeparationFunctionType {

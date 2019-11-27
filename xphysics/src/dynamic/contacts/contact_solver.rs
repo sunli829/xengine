@@ -78,59 +78,61 @@ impl<'a, T: Real, D> ContactSolver<'a, T, D> {
             Vec::<ContactVelocityConstraint<T>>::with_capacity(def.contacts.len());
         velocity_constraints.resize_with(def.contacts.len(), || unsafe { std::mem::zeroed() });
 
-        for i in 0..def.contacts.len() {
-            let contact = unsafe { def.contacts[i].as_ref().unwrap() };
-            let fixture_a = contact.fixture_a();
-            let fixture_b = contact.fixture_b();
-            let shape_a = fixture_a.shape();
-            let shape_b = fixture_a.shape();
-            let radius_a = shape_a.radius();
-            let radius_b = shape_b.radius();
-            let body_a = fixture_a.body();
-            let body_b = fixture_b.body();
-            let manifold = contact.manifold();
-            let point_count = manifold.point_count;
-            assert!(point_count > 0);
+        unsafe {
+            for i in 0..def.contacts.len() {
+                let contact = def.contacts[i].as_ref().unwrap();
+                let fixture_a = contact.fixture_a();
+                let fixture_b = contact.fixture_b();
+                let shape_a = fixture_a.shape();
+                let shape_b = fixture_a.shape();
+                let radius_a = shape_a.radius();
+                let radius_b = shape_b.radius();
+                let body_a = fixture_a.body_ptr;
+                let body_b = fixture_b.body_ptr;
+                let manifold = contact.manifold();
+                let point_count = manifold.point_count;
+                assert!(point_count > 0);
 
-            let vc = &mut velocity_constraints[i];
-            vc.friction = contact.friction();
-            vc.restitution = contact.restitution();
-            vc.tangent_speed = contact.tangent_speed();
-            vc.index_a = body_a.island_index;
-            vc.index_b = body_b.island_index;
-            vc.inv_mass_a = body_a.inv_mass;
-            vc.inv_mass_b = body_b.inv_mass;
-            vc.inv_i_a = body_a.inv_i;
-            vc.inv_i_b = body_b.inv_i;
-            vc.contact_index = i;
-            vc.point_count = point_count;
-            vc.k = Matrix22::zero();
-            vc.normal_mass = Matrix22::zero();
+                let vc = &mut velocity_constraints[i];
+                vc.friction = contact.friction();
+                vc.restitution = contact.restitution();
+                vc.tangent_speed = contact.tangent_speed();
+                vc.index_a = (*body_a).island_index;
+                vc.index_b = (*body_b).island_index;
+                vc.inv_mass_a = (*body_a).inv_mass;
+                vc.inv_mass_b = (*body_b).inv_mass;
+                vc.inv_i_a = (*body_a).inv_i;
+                vc.inv_i_b = (*body_b).inv_i;
+                vc.contact_index = i;
+                vc.point_count = point_count;
+                vc.k = Matrix22::zero();
+                vc.normal_mass = Matrix22::zero();
 
-            let pc = &mut position_constraints[i];
-            pc.index_a = body_a.island_index;
-            pc.index_b = body_b.island_index;
-            pc.inv_mass_a = body_a.inv_mass;
-            pc.inv_mass_b = body_b.inv_mass;
-            pc.local_center_a = body_a.sweep.local_center;
-            pc.local_center_b = body_b.sweep.local_center;
-            pc.inv_i_a = body_a.inv_i;
-            pc.inv_i_b = body_b.inv_i;
-            pc.local_normal = manifold.local_normal;
-            pc.local_point = manifold.local_point;
-            pc.point_count = point_count;
-            pc.radius_a = radius_a;
-            pc.radius_b = radius_b;
-            pc.type_ = manifold.type_;
-        }
+                let pc = &mut position_constraints[i];
+                pc.index_a = (*body_a).island_index;
+                pc.index_b = (*body_b).island_index;
+                pc.inv_mass_a = (*body_a).inv_mass;
+                pc.inv_mass_b = (*body_b).inv_mass;
+                pc.local_center_a = (*body_a).sweep.local_center;
+                pc.local_center_b = (*body_b).sweep.local_center;
+                pc.inv_i_a = (*body_a).inv_i;
+                pc.inv_i_b = (*body_b).inv_i;
+                pc.local_normal = manifold.local_normal;
+                pc.local_point = manifold.local_point;
+                pc.point_count = point_count;
+                pc.radius_a = radius_a;
+                pc.radius_b = radius_b;
+                pc.type_ = manifold.type_;
+            }
 
-        ContactSolver {
-            step: def.step,
-            positions: def.positions,
-            velocities: def.velocities,
-            position_constraints,
-            velocity_constraints,
-            contacts: def.contacts,
+            ContactSolver {
+                step: def.step,
+                positions: def.positions,
+                velocities: def.velocities,
+                position_constraints,
+                velocity_constraints,
+                contacts: def.contacts,
+            }
         }
     }
 
@@ -549,7 +551,11 @@ impl<'a, T: Real, D> ContactSolver<'a, T, D> {
         min_separation >= -T::from_i32(3) * settings::linear_slop()
     }
 
-    pub fn solve_toi_position_constraints(&mut self, toi_index_a: usize, toi_index_b: usize) -> bool {
+    pub fn solve_toi_position_constraints(
+        &mut self,
+        toi_index_a: usize,
+        toi_index_b: usize,
+    ) -> bool {
         let mut min_separation = T::zero();
 
         for i in 0..self.contacts.len() {

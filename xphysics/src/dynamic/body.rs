@@ -1,7 +1,7 @@
-use crate::collision::shapes::Shape;
 use crate::dynamic::contacts::ContactEdge;
 use crate::dynamic::fixture::FixtureDef;
 use crate::dynamic::world::{WorldFlags, WorldInner};
+use crate::Shape;
 use crate::{Fixture, MassData};
 use std::alloc::Layout;
 use xmath::{
@@ -595,6 +595,14 @@ impl<T: Real, D> Body<T, D> {
             (BodyType::Dynamic, BodyType::Dynamic) => true,
             _ => false,
         }
+    }
+
+    pub fn data(&self) -> &D {
+        &self.data
+    }
+
+    pub fn data_mut(&mut self) -> &mut D {
+        &mut self.data
     }
 
     pub fn create_fixture<S: Shape<T> + 'static>(

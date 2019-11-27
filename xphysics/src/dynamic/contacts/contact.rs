@@ -1,7 +1,8 @@
-use crate::shapes::{Chain, Circle, Edge, Polygon, Shape, ShapeType};
-use crate::{collision, settings, test_overlap};
-use crate::{Body, Fixture, Manifold, WorldManifold};
-use bitflags::_core::alloc::Layout;
+use crate::{
+    collision, settings, test_overlap, Body, Fixture, Manifold, Shape, ShapeChain, ShapeCircle,
+    ShapeEdge, ShapePolygon, ShapeType, WorldManifold,
+};
+use std::alloc::Layout;
 use xmath::{Real, Transform};
 
 #[inline]
@@ -93,7 +94,7 @@ pub struct Contact<T, D> {
 }
 
 impl<T: Real, D> Contact<T, D> {
-    pub fn new(
+    pub(crate) fn new(
         fixture_a: *mut Fixture<T, D>,
         index_a: usize,
         fixture_b: *mut Fixture<T, D>,
@@ -136,11 +137,11 @@ impl<T: Real, D> Contact<T, D> {
                         |manifold, shape_a, shape_b, xf_a, xf_b, _index_a, _index_b| {
                             collision::collide_circles(
                                 manifold,
-                                (shape_a as *const dyn Shape<T> as *const Circle<T>)
+                                (shape_a as *const dyn Shape<T> as *const ShapeCircle<T>)
                                     .as_ref()
                                     .unwrap(),
                                 xf_a,
-                                (shape_b as *const dyn Shape<T> as *const Circle<T>)
+                                (shape_b as *const dyn Shape<T> as *const ShapeCircle<T>)
                                     .as_ref()
                                     .unwrap(),
                                 xf_b,
@@ -151,11 +152,11 @@ impl<T: Real, D> Contact<T, D> {
                         |manifold, shape_a, shape_b, xf_a, xf_b, _index_a, _index_b| {
                             collision::collide_polygon_and_circle(
                                 manifold,
-                                (shape_a as *const dyn Shape<T> as *const Polygon<T>)
+                                (shape_a as *const dyn Shape<T> as *const ShapePolygon<T>)
                                     .as_ref()
                                     .unwrap(),
                                 xf_a,
-                                (shape_b as *const dyn Shape<T> as *const Circle<T>)
+                                (shape_b as *const dyn Shape<T> as *const ShapeCircle<T>)
                                     .as_ref()
                                     .unwrap(),
                                 xf_b,
@@ -166,11 +167,11 @@ impl<T: Real, D> Contact<T, D> {
                         |manifold, shape_a, shape_b, xf_a, xf_b, _index_a, _index_b| {
                             collision::collide_polygons(
                                 manifold,
-                                (shape_a as *const dyn Shape<T> as *const Polygon<T>)
+                                (shape_a as *const dyn Shape<T> as *const ShapePolygon<T>)
                                     .as_ref()
                                     .unwrap(),
                                 xf_a,
-                                (shape_b as *const dyn Shape<T> as *const Polygon<T>)
+                                (shape_b as *const dyn Shape<T> as *const ShapePolygon<T>)
                                     .as_ref()
                                     .unwrap(),
                                 xf_b,
@@ -181,11 +182,11 @@ impl<T: Real, D> Contact<T, D> {
                         |manifold, shape_a, shape_b, xf_a, xf_b, _index_a, _index_b| {
                             collision::collide_edge_and_circle(
                                 manifold,
-                                (shape_a as *const dyn Shape<T> as *const Edge<T>)
+                                (shape_a as *const dyn Shape<T> as *const ShapeEdge<T>)
                                     .as_ref()
                                     .unwrap(),
                                 xf_a,
-                                (shape_b as *const dyn Shape<T> as *const Circle<T>)
+                                (shape_b as *const dyn Shape<T> as *const ShapeCircle<T>)
                                     .as_ref()
                                     .unwrap(),
                                 xf_b,
@@ -196,11 +197,11 @@ impl<T: Real, D> Contact<T, D> {
                         |manifold, shape_a, shape_b, xf_a, xf_b, _index_a, _index_b| {
                             collision::collide_edge_and_polygon(
                                 manifold,
-                                (shape_a as *const dyn Shape<T> as *const Edge<T>)
+                                (shape_a as *const dyn Shape<T> as *const ShapeEdge<T>)
                                     .as_ref()
                                     .unwrap(),
                                 xf_a,
-                                (shape_b as *const dyn Shape<T> as *const Polygon<T>)
+                                (shape_b as *const dyn Shape<T> as *const ShapePolygon<T>)
                                     .as_ref()
                                     .unwrap(),
                                 xf_b,
@@ -211,12 +212,12 @@ impl<T: Real, D> Contact<T, D> {
                         |manifold, shape_a, shape_b, xf_a, xf_b, index_a, _index_b| {
                             collision::collide_edge_and_circle(
                                 manifold,
-                                &(shape_a as *const dyn Shape<T> as *const Chain<T>)
+                                &(shape_a as *const dyn Shape<T> as *const ShapeChain<T>)
                                     .as_ref()
                                     .unwrap()
                                     .get_child_edge(index_a),
                                 xf_a,
-                                (shape_b as *const dyn Shape<T> as *const Circle<T>)
+                                (shape_b as *const dyn Shape<T> as *const ShapeCircle<T>)
                                     .as_ref()
                                     .unwrap(),
                                 xf_b,
@@ -227,12 +228,12 @@ impl<T: Real, D> Contact<T, D> {
                         |manifold, shape_a, shape_b, xf_a, xf_b, index_a, _index_b| {
                             collision::collide_edge_and_polygon(
                                 manifold,
-                                &(shape_a as *const dyn Shape<T> as *const Chain<T>)
+                                &(shape_a as *const dyn Shape<T> as *const ShapeChain<T>)
                                     .as_ref()
                                     .unwrap()
                                     .get_child_edge(index_a),
                                 xf_a,
-                                (shape_b as *const dyn Shape<T> as *const Polygon<T>)
+                                (shape_b as *const dyn Shape<T> as *const ShapePolygon<T>)
                                     .as_ref()
                                     .unwrap(),
                                 xf_b,
@@ -255,7 +256,7 @@ impl<T: Real, D> Contact<T, D> {
         }
     }
 
-    pub fn destroy(contact: *mut Contact<T, D>) {
+    pub(crate) fn destroy(contact: *mut Contact<T, D>) {
         unsafe {
             std::ptr::drop_in_place::<Contact<T, D>>(contact);
             std::alloc::dealloc(contact as *mut u8, Layout::new::<Contact<T, D>>());
@@ -266,21 +267,21 @@ impl<T: Real, D> Contact<T, D> {
         &self.manifold
     }
 
-    pub fn manifold_mut(&mut self) -> &mut Manifold<T> {
+    pub(crate) fn manifold_mut(&mut self) -> &mut Manifold<T> {
         &mut self.manifold
     }
 
     pub fn world_manifold(&self) -> WorldManifold<T> {
         unsafe {
-            let body_a = (*self.fixture_a_ptr).body();
-            let body_b = (*self.fixture_b_ptr).body();
+            let body_a = (*self.fixture_a_ptr).body_ptr;
+            let body_b = (*self.fixture_b_ptr).body_ptr;
             let shape_a = (*self.fixture_a_ptr).shape();
             let shape_b = (*self.fixture_b_ptr).shape();
             WorldManifold::new(
                 &self.manifold,
-                body_a.transform(),
+                (*body_a).transform(),
                 shape_a.radius(),
-                body_b.transform(),
+                (*body_b).transform(),
                 shape_b.radius(),
             )
         }
@@ -296,10 +297,6 @@ impl<T: Real, D> Contact<T, D> {
 
     pub fn is_enable(&self) -> bool {
         self.flags.contains(ContactFlags::ENABLED)
-    }
-
-    pub fn next(&self) -> &Contact<T, D> {
-        unsafe { self.next_ptr.as_ref().unwrap() }
     }
 
     pub fn fixture_a(&self) -> &Fixture<T, D> {
@@ -351,6 +348,10 @@ impl<T: Real, D> Contact<T, D> {
         self.restitution
     }
 
+    pub(crate) fn flag_for_filtering(&mut self) {
+        self.flags.insert(ContactFlags::FILTER)
+    }
+
     pub fn reset_restitution(&mut self) {
         self.friction = unsafe {
             mix_restitution(
@@ -368,7 +369,7 @@ impl<T: Real, D> Contact<T, D> {
         self.tangent_speed
     }
 
-    pub fn evaluate(&mut self, xf_a: &Transform<T>, xf_b: &Transform<T>) {
+    pub(crate) fn evaluate(&mut self, xf_a: &Transform<T>, xf_b: &Transform<T>) {
         unsafe {
             (self.evaluate_fn)(
                 &mut self.manifold,
@@ -395,10 +396,10 @@ impl<T: Real, D> Contact<T, D> {
             let sensor_b = (*self.fixture_b_ptr).is_sensor();
             let sensor = sensor_a || sensor_b;
 
-            let body_a = (*self.fixture_a_ptr).body_mut();
-            let body_b = (*self.fixture_b_ptr).body_mut();
-            let xf_a = body_a.transform();
-            let xf_b = body_b.transform();
+            let body_a = (*self.fixture_a_ptr).body_ptr;
+            let body_b = (*self.fixture_b_ptr).body_ptr;
+            let xf_a = (*body_a).transform();
+            let xf_b = (*body_b).transform();
 
             if sensor {
                 let shape_a = (*self.fixture_a_ptr).shape();
@@ -427,8 +428,8 @@ impl<T: Real, D> Contact<T, D> {
                 }
 
                 if touching != was_touching {
-                    body_a.set_awake(true);
-                    body_b.set_awake(true);
+                    (*body_a).set_awake(true);
+                    (*body_b).set_awake(true);
                 }
             }
 

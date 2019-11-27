@@ -1,21 +1,20 @@
 use crate::collision::distance::DistanceProxy;
-use crate::shapes::{Shape, ShapeType};
-use crate::{MassData, RayCastInput, RayCastOutput};
+use crate::{MassData, RayCastInput, RayCastOutput, Shape, ShapeType};
 use std::borrow::Cow;
 use xmath::{DotTrait, Multiply, Real, Transform, Vector2, AABB};
 
-pub struct Circle<T> {
+pub struct ShapeCircle<T> {
     pub(crate) radius: T,
     pub(crate) position: Vector2<T>,
 }
 
-impl<T: Real> Circle<T> {
-    pub fn new(position: Vector2<T>, radius: T) -> Circle<T> {
-        Circle { position, radius }
+impl<T: Real> ShapeCircle<T> {
+    pub fn new(position: Vector2<T>, radius: T) -> ShapeCircle<T> {
+        ShapeCircle { position, radius }
     }
 }
 
-impl<T: Real> Shape<T> for Circle<T> {
+impl<T: Real> Shape<T> for ShapeCircle<T> {
     fn shape_type(&self) -> ShapeType {
         ShapeType::Circle
     }

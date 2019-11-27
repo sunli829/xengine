@@ -14,17 +14,25 @@ mod tests {
     use super::*;
     use xmath::Vector2;
 
-    #[test]
-    fn test() {
-        let mut world = World::<f32, _>::new(Vector2::zero());
+    fn create_body(world: &mut World<f32, i32>, position: Vector2<f32>) {
         let body = world.create_body(BodyDef {
             data: 10,
             type_: BodyType::Dynamic,
             ..BodyDef::default()
         });
-        let fixture = body.create_fixture(FixtureDef {
-            ..FixtureDef::new(shapes::Circle::new(Vector2::new(100.0, 100.0), 50.0))
+        body.create_fixture(FixtureDef {
+            ..FixtureDef::new(ShapeCircle::new(position, 50.0))
         });
+    }
+
+    #[test]
+    fn test() {
+        let mut world = World::<f32, _>::new(Vector2::zero());
+        create_body(&mut world, Vector2::new(100.0, 100.0));
+        create_body(&mut world, Vector2::new(130.0, 100.0));
         world.step(0.1, 5, 20);
+        for _ in 0..10000 {
+            world.step(0.1, 5, 20);
+        }
     }
 }

@@ -147,15 +147,6 @@ impl<T: Real> Simplex<T> {
         }
     }
 
-    fn get_closest_point(&self) -> Vector2<T> {
-        match self.count {
-            1 => self.v1.w,
-            2 => self.v1.w * self.v1.a + self.v2.w * self.v2.a,
-            3 => Vector2::zero(),
-            _ => unreachable!(),
-        }
-    }
-
     fn get_witness_points(&self) -> (Vector2<T>, Vector2<T>) {
         match self.count {
             1 => (self.v1.wa, self.v1.wb),

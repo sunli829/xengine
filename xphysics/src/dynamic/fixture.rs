@@ -1,5 +1,4 @@
-use crate::shapes::Shape;
-use crate::{Body, BroadPhase, MassData, RayCastInput, RayCastOutput};
+use crate::{Body, BroadPhase, MassData, RayCastInput, RayCastOutput, Shape};
 use xmath::{Real, Transform, Vector2, AABB};
 
 #[derive(Copy, Clone)]
@@ -92,7 +91,32 @@ impl<T: Real, D> Fixture<T, D> {
     }
 
     fn re_filter(&mut self) {
-        unimplemented!();
+        unsafe {
+            if self.body_ptr.is_null() {
+                return;
+            }
+
+            let mut edge = (*self.body_ptr).contact_list_ptr;
+            while !edge.is_null() {
+                let contact = (*edge).contact_ptr;
+                let fixture_a = (*contact).fixture_a_ptr;
+                let fixture_b = (*contact).fixture_b_ptr;
+                if fixture_a == self || fixture_b == self {
+                    (*contact).flag_for_filtering();
+                }
+                edge = (*edge).next_ptr;
+            }
+
+            let world = (*self.body_ptr).world_ptr;
+            if world.is_null() {
+                return;
+            }
+
+            let broad_phase = &mut (*world).contact_manager.broad_phase;
+            for i in 0..self.proxies.len() {
+                broad_phase.touch_proxy(self.proxies[i].proxy_id);
+            }
+        }
     }
 
     pub fn filter(&self) -> &Filter {

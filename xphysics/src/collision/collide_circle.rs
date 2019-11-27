@@ -1,12 +1,11 @@
-use crate::shapes::{Circle, Polygon, Shape};
-use crate::{ContactId, Manifold, ManifoldPoint, ManifoldType};
+use crate::{ContactId, Manifold, ManifoldPoint, ManifoldType, Shape, ShapeCircle, ShapePolygon};
 use xmath::{DotTrait, Multiply, Real, Transform, TransposeMultiply, Vector2};
 
 pub fn collide_circles<T: Real>(
     manifold: &mut Manifold<T>,
-    circle_a: &Circle<T>,
+    circle_a: &ShapeCircle<T>,
     xf_a: &Transform<T>,
-    circle_b: &Circle<T>,
+    circle_b: &ShapeCircle<T>,
     xf_b: &Transform<T>,
 ) {
     let pa = xf_a.multiply(circle_a.position);
@@ -36,9 +35,9 @@ pub fn collide_circles<T: Real>(
 
 pub fn collide_polygon_and_circle<T: Real>(
     manifold: &mut Manifold<T>,
-    polygon_a: &Polygon<T>,
+    polygon_a: &ShapePolygon<T>,
     xf_a: &Transform<T>,
-    circle_b: &Circle<T>,
+    circle_b: &ShapeCircle<T>,
     xf_b: &Transform<T>,
 ) {
     let c = xf_b.multiply(circle_b.position);

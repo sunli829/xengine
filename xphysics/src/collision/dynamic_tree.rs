@@ -332,10 +332,6 @@ impl<T: Real, D> DynamicTree<T, D> {
         self.nodes.get(proxy_id).and_then(|d| d.data.as_ref())
     }
 
-    pub fn get_data_mut(&mut self, proxy_id: usize) -> Option<&mut D> {
-        self.nodes.get_mut(proxy_id).and_then(|d| d.data.as_mut())
-    }
-
     pub fn query(&self, aabb: AABB<T>) -> QueryIter<T, D> {
         let mut stack = Vec::with_capacity(QUERY_STACK_INIT_SIZE);
         if let Some(root) = self.root {

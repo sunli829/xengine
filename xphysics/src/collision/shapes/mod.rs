@@ -7,17 +7,16 @@ mod edge;
 mod polygon;
 
 use crate::collision::distance::DistanceProxy;
-pub use chain::Chain;
-pub use circle::Circle;
-pub use edge::Edge;
-pub use polygon::Polygon;
+pub use chain::ShapeChain;
+pub use circle::ShapeCircle;
+pub use edge::ShapeEdge;
+pub use polygon::ShapePolygon;
 
 pub enum ShapeType {
     Circle,
     Edge,
     Polygon,
     Chain,
-    TypeCount,
 }
 
 pub trait Shape<T: Real> {

@@ -11,7 +11,7 @@ use xmath::{DotTrait, Real, Vector2};
 pub struct Island<'a, T, D> {
     contact_listener: &'a Option<Box<dyn ContactListener<T, D>>>,
     pub(crate) bodies: Vec<*mut Body<T, D>>,
-    contacts: Vec<*mut Contact<T, D>>,
+    pub(crate) contacts: Vec<*mut Contact<T, D>>,
     positions: Vec<Position<T>>,
     velocities: Vec<Velocity<T>>,
 }

@@ -1,17 +1,16 @@
 use crate::collision::distance::DistanceProxy;
 use crate::settings;
-use crate::shapes::{Edge, Shape, ShapeType};
-use crate::{MassData, RayCastInput, RayCastOutput};
+use crate::{MassData, RayCastInput, RayCastOutput, Shape, ShapeEdge, ShapeType};
 use std::borrow::Cow;
 use xmath::{Multiply, Real, Transform, Vector2, AABB};
 
-pub struct Chain<T> {
+pub struct ShapeChain<T> {
     pub(crate) vertices: Vec<Vector2<T>>,
     pub(crate) prev_vertex: Option<Vector2<T>>,
     pub(crate) next_vertex: Option<Vector2<T>>,
 }
 
-impl<T: Real> Chain<T> {
+impl<T: Real> ShapeChain<T> {
     fn check_vertices(vertices: &Vec<Vector2<T>>) {
         for i in 1..vertices.len() {
             let v1 = vertices[i - 1];
@@ -23,35 +22,35 @@ impl<T: Real> Chain<T> {
         }
     }
 
-    pub fn create_loop(mut vertices: Vec<Vector2<T>>) -> Chain<T> {
+    pub fn create_loop(mut vertices: Vec<Vector2<T>>) -> ShapeChain<T> {
         assert!(vertices.len() >= 3);
         Self::check_vertices(&vertices);
 
         vertices.push(vertices[0]);
         let prev_vertex = Some(vertices[vertices.len() - 2]);
         let next_vertex = Some(vertices[1]);
-        Chain {
+        ShapeChain {
             vertices,
             prev_vertex,
             next_vertex,
         }
     }
 
-    pub fn create_chain(vertices: Vec<Vector2<T>>) -> Chain<T> {
+    pub fn create_chain(vertices: Vec<Vector2<T>>) -> ShapeChain<T> {
         assert!(vertices.len() >= 2);
         Self::check_vertices(&vertices);
 
-        Chain {
+        ShapeChain {
             vertices,
             prev_vertex: None,
             next_vertex: None,
         }
     }
 
-    pub fn get_child_edge(&self, index: usize) -> Edge<T> {
+    pub fn get_child_edge(&self, index: usize) -> ShapeEdge<T> {
         assert!(index < self.vertices.len() - 1);
 
-        Edge {
+        ShapeEdge {
             vertex1: self.vertices[index + 0],
             vertex2: self.vertices[index + 1],
             vertex0: if index > 0 {
@@ -68,7 +67,7 @@ impl<T: Real> Chain<T> {
     }
 }
 
-impl<T: Real> Shape<T> for Chain<T> {
+impl<T: Real> Shape<T> for ShapeChain<T> {
     fn shape_type(&self) -> ShapeType {
         ShapeType::Chain
     }
@@ -99,7 +98,7 @@ impl<T: Real> Shape<T> for Chain<T> {
             i2 = 0;
         }
 
-        let edge = Edge::new(self.vertices[i1], self.vertices[i2]);
+        let edge = ShapeEdge::new(self.vertices[i1], self.vertices[i2]);
         edge.ray_cast(input, xf, 0)
     }
 

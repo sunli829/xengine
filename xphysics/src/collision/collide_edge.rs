@@ -1,16 +1,15 @@
-use crate::collision::shapes::Polygon;
-use crate::shapes::{Circle, Edge, Shape};
+use crate::collision::shapes::ShapePolygon;
 use crate::{
     clip_segment_to_line, settings, ClipVertex, ContactFeature, ContactFeatureType, Manifold,
-    ManifoldType,
+    ManifoldType, Shape, ShapeCircle, ShapeEdge,
 };
 use xmath::{CrossTrait, DotTrait, Multiply, Real, Transform, TransposeMultiply, Vector2};
 
 pub fn collide_edge_and_circle<T: Real>(
     manifold: &mut Manifold<T>,
-    edge_a: &Edge<T>,
+    edge_a: &ShapeEdge<T>,
     xf_a: &Transform<T>,
-    circle_b: &Circle<T>,
+    circle_b: &ShapeCircle<T>,
     xf_b: &Transform<T>,
 ) {
     manifold.point_count = 0;
@@ -168,8 +167,8 @@ struct EPCollider<T: Real> {
     normal1: Vector2<T>,
     normal2: Vector2<T>,
     normal: Vector2<T>,
-//    type1: VertexType,
-//    type2: VertexType,
+    //    type1: VertexType,
+    //    type2: VertexType,
     lower_limit: Vector2<T>,
     upper_limit: Vector2<T>,
     radius: T,
@@ -239,9 +238,9 @@ impl<T: Real> EPCollider<T> {
     fn collide(
         &mut self,
         manifold: &mut Manifold<T>,
-        edge_a: &Edge<T>,
+        edge_a: &ShapeEdge<T>,
         xf_a: &Transform<T>,
-        polygon_b: &Polygon<T>,
+        polygon_b: &ShapePolygon<T>,
         xf_b: &Transform<T>,
     ) {
         self.xf = xf_a.transpose_multiply(*xf_b);
@@ -557,9 +556,9 @@ impl<T: Real> EPCollider<T> {
 
 pub fn collide_edge_and_polygon<T: Real>(
     manifold: &mut Manifold<T>,
-    edge_a: &Edge<T>,
+    edge_a: &ShapeEdge<T>,
     xf_a: &Transform<T>,
-    polygon_b: &Polygon<T>,
+    polygon_b: &ShapePolygon<T>,
     xf_b: &Transform<T>,
 ) {
     let mut collider: EPCollider<T> = unsafe { std::mem::zeroed() };

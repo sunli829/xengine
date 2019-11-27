@@ -1,21 +1,20 @@
 use crate::collision::distance::DistanceProxy;
-use crate::shapes::{Shape, ShapeType};
-use crate::{settings, MassData, RayCastInput, RayCastOutput};
+use crate::{settings, MassData, RayCastInput, RayCastOutput, Shape, ShapeType};
 use std::borrow::Cow;
 use xmath::{
     CrossTrait, DotTrait, Multiply, Real, Rotation, Transform, TransposeMultiply, Vector2, AABB,
 };
 
-pub struct Polygon<T> {
+pub struct ShapePolygon<T> {
     pub(crate) centroid: Vector2<T>,
     pub(crate) vertices: [Vector2<T>; settings::MAX_POLYGON_VERTICES],
     pub(crate) normals: [Vector2<T>; settings::MAX_POLYGON_VERTICES],
     pub(crate) count: usize,
 }
 
-impl<T: Real> Polygon<T> {
-    pub fn new_box_center(hx: T, hy: T) -> Polygon<T> {
-        Polygon {
+impl<T: Real> ShapePolygon<T> {
+    pub fn new_box_center(hx: T, hy: T) -> ShapePolygon<T> {
+        ShapePolygon {
             centroid: Vector2::zero(),
             vertices: [
                 Vector2::new(-hx, -hy),
@@ -41,7 +40,7 @@ impl<T: Real> Polygon<T> {
         }
     }
 
-    pub fn new_box(&self, hx: T, hy: T, center: Vector2<T>, angle: T) -> Polygon<T> {
+    pub fn new_box(&self, hx: T, hy: T, center: Vector2<T>, angle: T) -> ShapePolygon<T> {
         let mut polygon = Self::new_box_center(hx, hy);
 
         let xf = Transform::new(center, Rotation::new(angle));
@@ -84,7 +83,7 @@ impl<T: Real> Polygon<T> {
         c * (T::one() / area)
     }
 
-    pub fn new(vertices: &[Vector2<T>]) -> Polygon<T> {
+    pub fn new(vertices: &[Vector2<T>]) -> ShapePolygon<T> {
         assert!(3 <= vertices.len() && vertices.len() <= settings::MAX_POLYGON_VERTICES);
         if vertices.len() < 3 {
             return Self::new_box_center(T::one(), T::one());
@@ -167,7 +166,7 @@ impl<T: Real> Polygon<T> {
             unreachable!();
         }
 
-        let mut shape = Polygon {
+        let mut shape = ShapePolygon {
             centroid: Default::default(),
             vertices: [Vector2::zero(); settings::MAX_POLYGON_VERTICES],
             normals: [Vector2::zero(); settings::MAX_POLYGON_VERTICES],
@@ -190,7 +189,7 @@ impl<T: Real> Polygon<T> {
     }
 }
 
-impl<T: Real> Shape<T> for Polygon<T> {
+impl<T: Real> Shape<T> for ShapePolygon<T> {
     fn shape_type(&self) -> ShapeType {
         ShapeType::Polygon
     }

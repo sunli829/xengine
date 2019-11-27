@@ -1,13 +1,15 @@
 use crate::settings;
-use crate::shapes::{Polygon, Shape};
-use crate::{clip_segment_to_line, ClipVertex, ContactFeatureType, Manifold, ManifoldType};
+use crate::{
+    clip_segment_to_line, ClipVertex, ContactFeatureType, Manifold, ManifoldType, Shape,
+    ShapePolygon,
+};
 use xmath::{CrossTrait, DotTrait, Multiply, Real, Transform, TransposeMultiply};
 
 fn find_max_separation<T: Real>(
     edge_index: &mut usize,
-    poly1: &Polygon<T>,
+    poly1: &ShapePolygon<T>,
     xf1: &Transform<T>,
-    poly2: &Polygon<T>,
+    poly2: &ShapePolygon<T>,
     xf2: &Transform<T>,
 ) -> T {
     let count1 = poly1.count;
@@ -43,10 +45,10 @@ fn find_max_separation<T: Real>(
 
 fn find_incident_edge<T: Real>(
     c: &mut [ClipVertex<T>; 2],
-    poly1: &Polygon<T>,
+    poly1: &ShapePolygon<T>,
     xf1: &Transform<T>,
     edge1: usize,
-    poly2: &Polygon<T>,
+    poly2: &ShapePolygon<T>,
     xf2: &Transform<T>,
 ) {
     let normals1 = poly1.normals;
@@ -87,9 +89,9 @@ fn find_incident_edge<T: Real>(
 
 pub fn collide_polygons<T: Real>(
     manifold: &mut Manifold<T>,
-    poly_a: &Polygon<T>,
+    poly_a: &ShapePolygon<T>,
     xf_a: &Transform<T>,
-    poly_b: &Polygon<T>,
+    poly_b: &ShapePolygon<T>,
     xf_b: &Transform<T>,
 ) {
     manifold.point_count = 0;

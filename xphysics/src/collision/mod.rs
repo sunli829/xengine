@@ -1,6 +1,5 @@
 use crate::collision::distance::{DistanceInput, SimpleCache};
 use crate::settings;
-use crate::shapes::Shape;
 use xmath::{DotTrait, Multiply, Real, Transform, Vector2};
 
 mod broad_phase;
@@ -9,13 +8,14 @@ mod collide_edge;
 mod collide_polygon;
 mod distance;
 pub(crate) mod dynamic_tree;
-pub mod shapes;
-mod time_of_impact;
+mod shapes;
+pub(crate) mod time_of_impact;
 
 pub(crate) use broad_phase::BroadPhase;
 pub(crate) use collide_circle::{collide_circles, collide_polygon_and_circle};
 pub(crate) use collide_edge::{collide_edge_and_circle, collide_edge_and_polygon};
 pub(crate) use collide_polygon::collide_polygons;
+pub use shapes::*;
 
 pub struct MassData<T> {
     pub mass: T,
@@ -171,7 +171,8 @@ pub enum PointState {
     Remove,
 }
 
-pub fn get_point_states<T: Real>(
+#[allow(dead_code)]
+pub(crate) fn get_point_states<T: Real>(
     manifold1: &Manifold<T>,
     manifold2: &Manifold<T>,
 ) -> (
