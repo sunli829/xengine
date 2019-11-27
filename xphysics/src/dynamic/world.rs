@@ -11,8 +11,11 @@ use crate::{
     settings, Body, BodyType, Fixture, RayCastInput, Shape, ShapeChain, ShapeCircle, ShapeEdge,
     ShapePolygon, ShapeType,
 };
-use std::alloc::Layout;
+use slab::Slab;
 use xmath::{Multiply, Real, Rotation, Transform, Vector2, AABB};
+
+#[derive(Debug, Copy, Clone)]
+pub struct BodyId(usize);
 
 bitflags! {
     pub struct WorldFlags: u32 {
@@ -69,6 +72,7 @@ pub trait DebugDraw {
 }
 
 pub(crate) struct WorldInner<T, D> {
+    pub(crate) bodies_slab: Slab<Body<T, D>>,
     pub(crate) flags: WorldFlags,
     pub(crate) contact_manager: ContactManager<T, D>,
     pub(crate) body_list: *mut Body<T, D>,
@@ -86,26 +90,12 @@ pub(crate) struct WorldInner<T, D> {
     pub(crate) profile: Profile,
 }
 
-impl<T, D> Drop for WorldInner<T, D> {
-    fn drop(&mut self) {
-        unsafe {
-            let body_layout = Layout::new::<Body<T, D>>();
-            let mut b = self.body_list;
-            while !b.is_null() {
-                let next = (*b).next_ptr;
-                std::ptr::drop_in_place::<Body<T, D>>(b);
-                std::alloc::dealloc(b as *mut u8, body_layout);
-                b = next;
-            }
-        }
-    }
-}
-
 pub struct World<T, D>(Box<WorldInner<T, D>>);
 
 impl<T: Real, D> World<T, D> {
     pub fn new(gravity: Vector2<T>) -> World<T, D> {
         World(Box::new(WorldInner {
+            bodies_slab: Default::default(),
             flags: WorldFlags::CLEAR_FORCES,
             contact_manager: ContactManager::new(),
             body_list: std::ptr::null_mut(),
@@ -189,13 +179,20 @@ impl<T: Real, D> World<T, D> {
         }
     }
 
-    pub fn create_body(&mut self, def: BodyDef<T, D>) -> &mut Body<T, D> {
-        unsafe {
-            let data = std::alloc::alloc(Layout::new::<Body<T, D>>());
-            let body = Body::new(self.0.as_mut(), def);
-            *(data as *mut Body<T, D>) = body;
+    pub fn body(&self, id: BodyId) -> Option<&Body<T, D>> {
+        self.0.bodies_slab.get(id.0)
+    }
 
-            let body = (data as *mut Body<T, D>).as_mut().unwrap();
+    pub fn body_mut(&mut self, id: BodyId) -> Option<&mut Body<T, D>> {
+        self.0.bodies_slab.get_mut(id.0)
+    }
+
+    pub fn create_body(&mut self, def: BodyDef<T, D>) -> BodyId {
+        unsafe {
+            let world_ptr = self.0.as_mut() as *mut WorldInner<T, D>;
+            let id = self.0.bodies_slab.insert(Body::new(world_ptr, def));
+            let body = self.0.bodies_slab.get_unchecked_mut(id);
+
             body.prev_ptr = std::ptr::null_mut();
             body.next_ptr = self.0.body_list;
             if !self.0.body_list.is_null() {
@@ -203,7 +200,41 @@ impl<T: Real, D> World<T, D> {
             }
             self.0.body_list = body;
             self.0.body_count += 1;
-            body
+            BodyId(id)
+        }
+    }
+
+    pub fn destroy_body(&mut self, id: BodyId) {
+        unsafe {
+            assert!(self.0.flags.contains(WorldFlags::LOCKED));
+            let body = self.0.bodies_slab.get_unchecked_mut(id.0);
+
+            let mut ce = body.contact_list_ptr;
+            while !ce.is_null() {
+                let ce0 = ce;
+                ce = (*ce).next_ptr;
+                self.0.contact_manager.destroy((*ce0).contact_ptr);
+            }
+
+            for (_, f) in &mut body.fixture_list {
+                if let Some(l) = &(*body.world_ptr).destruction_listener {
+                    l.fixture_destroyed(f.as_ref());
+                }
+                f.destroy_proxies(&mut (*body.world_ptr).contact_manager.broad_phase);
+            }
+
+            if !body.prev_ptr.is_null() {
+                (*body.prev_ptr).next_ptr = body.next_ptr;
+            }
+            if !body.next_ptr.is_null() {
+                (*body.next_ptr).prev_ptr = body.prev_ptr;
+            }
+            if body as *mut Body<T, D> == self.0.body_list {
+                self.0.body_list = body.next_ptr;
+            }
+
+            self.0.bodies_slab.remove(id.0);
+            self.0.body_count -= 1;
         }
     }
 
@@ -705,7 +736,7 @@ impl<T: Real, D> World<T, D> {
                         }
 
                         let xf = (*b).transform();
-                        for f in &(*b).fixture_list {
+                        for (_, f) in &(*b).fixture_list {
                             if !(*b).is_active() {
                                 self.draw_shape(f, xf, Color::rgb(0.5, 0.5, 0.3));
                             } else if (*b).body_type() == BodyType::Static {
@@ -739,7 +770,7 @@ impl<T: Real, D> World<T, D> {
                             continue;
                         }
 
-                        for f in &(*b).fixture_list {
+                        for (_, f) in &(*b).fixture_list {
                             for i in 0..f.proxies.len() {
                                 let proxy = &f.proxies[i];
                                 let aabb = bp.tree.get_fat_aabb(proxy.proxy_id);
@@ -921,13 +952,13 @@ impl<T: Real, D> World<T, D> {
         }
     }
 
-    pub fn query_aabb(&self, aabb: AABB<T>) -> impl Iterator<Item = &mut Fixture<T, D>> {
+    pub fn query_aabb(&self, aabb: AABB<T>) -> impl Iterator<Item = &Fixture<T, D>> {
         self.0
             .contact_manager
             .broad_phase
             .tree
             .query(aabb)
-            .map(|item| unsafe { ((*(*item.2)).fixture_ptr).as_mut().unwrap() })
+            .map(|item| unsafe { ((*(*item.2)).fixture_ptr).as_ref().unwrap() })
     }
 
     pub fn ray_cast(&self, input: RayCastInput<T>) -> RayCastIter<T, D> {
@@ -948,10 +979,10 @@ impl<'a, T: Real, D> RayCastIter<'a, T, D> {
 }
 
 impl<'a, T: Real, D> Iterator for RayCastIter<'a, T, D> {
-    type Item = &'a mut Fixture<T, D>;
+    type Item = &'a Fixture<T, D>;
 
     fn next(&mut self) -> Option<Self::Item> {
         Iterator::next(&mut self.iter)
-            .map(|item| unsafe { ((*(*item.2)).fixture_ptr).as_mut().unwrap() })
+            .map(|item| unsafe { ((*(*item.2)).fixture_ptr).as_ref().unwrap() })
     }
 }

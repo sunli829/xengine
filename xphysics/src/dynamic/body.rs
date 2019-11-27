@@ -3,7 +3,6 @@ use crate::dynamic::fixture::FixtureDef;
 use crate::dynamic::world::{WorldFlags, WorldInner};
 use crate::Shape;
 use crate::{Fixture, MassData};
-use std::alloc::Layout;
 use xmath::{
     CrossTrait, DotTrait, Multiply, Real, Rotation, Sweep, Transform, TransposeMultiply, Vector2,
 };
@@ -48,7 +47,7 @@ impl<T: Real, D: Default> Default for BodyDef<T, D> {
             bullet: false,
             active: true,
             data: Default::default(),
-            gravity_scale: T::zero(),
+            gravity_scale: T::one(),
         }
     }
 }
@@ -66,6 +65,9 @@ bitflags! {
     }
 }
 
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub struct FixtureId(usize);
+
 pub struct Body<T, D> {
     pub(crate) world_ptr: *mut WorldInner<T, D>,
     pub(crate) type_: BodyType,
@@ -79,7 +81,8 @@ pub struct Body<T, D> {
     pub(crate) torque: T,
     pub(crate) prev_ptr: *mut Body<T, D>,
     pub(crate) next_ptr: *mut Body<T, D>,
-    pub(crate) fixture_list: Vec<Box<Fixture<T, D>>>,
+    pub(crate) fixture_inc_id: usize,
+    pub(crate) fixture_list: Vec<(FixtureId, Box<Fixture<T, D>>)>,
     pub(crate) contact_list_ptr: *mut ContactEdge<T, D>,
     pub(crate) mass: T,
     pub(crate) inv_mass: T,
@@ -149,6 +152,7 @@ impl<T: Real, D> Body<T, D> {
             torque: T::zero(),
             prev_ptr: std::ptr::null_mut(),
             next_ptr: std::ptr::null_mut(),
+            fixture_inc_id: 0,
             fixture_list: Vec::new(),
             contact_list_ptr: std::ptr::null_mut(),
             mass,
@@ -160,46 +164,6 @@ impl<T: Real, D> Body<T, D> {
             gravity_scale: def.gravity_scale,
             sleep_time: T::zero(),
             data: def.data,
-        }
-    }
-
-    pub fn destroy(&mut self) {
-        unsafe {
-            assert!(!(*self.world_ptr).flags.contains(WorldFlags::LOCKED));
-
-            let mut ce = self.contact_list_ptr;
-            while !ce.is_null() {
-                let ce0 = ce;
-                ce = (*ce).next_ptr;
-                (*self.world_ptr)
-                    .contact_manager
-                    .destroy((*ce0).contact_ptr);
-            }
-
-            for f in &mut self.fixture_list {
-                if let Some(l) = &(*self.world_ptr).destruction_listener {
-                    l.fixture_destroyed(f.as_ref());
-                }
-                f.destroy_proxies(&mut (*self.world_ptr).contact_manager.broad_phase);
-            }
-
-            if !self.prev_ptr.is_null() {
-                (*self.prev_ptr).next_ptr = self.next_ptr;
-            }
-            if !self.next_ptr.is_null() {
-                (*self.next_ptr).prev_ptr = self.prev_ptr;
-            }
-            if self as *mut Body<T, D> == (*self.world_ptr).body_list {
-                (*self.world_ptr).body_list = self.next_ptr;
-            }
-
-            std::ptr::drop_in_place(self);
-            std::alloc::dealloc(
-                self as *mut Body<T, D> as *mut u8,
-                Layout::new::<Body<T, D>>(),
-            );
-
-            (*self.world_ptr).body_count -= 1;
         }
     }
 
@@ -363,7 +327,7 @@ impl<T: Real, D> Body<T, D> {
 
         unsafe {
             let broad_phase = &mut (*self.world_ptr).contact_manager.broad_phase;
-            for f in &mut self.fixture_list {
+            for (_, f) in &mut self.fixture_list {
                 f.synchronize(broad_phase, &xf1, &self.xf);
             }
         }
@@ -474,7 +438,7 @@ impl<T: Real, D> Body<T, D> {
             self.contact_list_ptr = std::ptr::null_mut();
 
             let broad_phase = &mut (*self.world_ptr).contact_manager.broad_phase;
-            for f in &mut self.fixture_list {
+            for (_, f) in &mut self.fixture_list {
                 for proxy in &f.proxies {
                     broad_phase.touch_proxy(proxy.proxy_id);
                 }
@@ -533,8 +497,26 @@ impl<T: Real, D> Body<T, D> {
         self.flags.contains(BodyFlags::AUTO_SLEEP)
     }
 
-    pub fn get_fixture_list(&self) -> &[Box<Fixture<T, D>>] {
+    pub fn fixture_list(&self) -> &[(FixtureId, Box<Fixture<T, D>>)] {
         &self.fixture_list
+    }
+
+    pub fn fixture_list_mut(&mut self) -> &[(FixtureId, Box<Fixture<T, D>>)] {
+        &mut self.fixture_list
+    }
+
+    pub fn fixture(&self, id: FixtureId) -> Option<&Fixture<T, D>> {
+        self.fixture_list
+            .iter()
+            .find(|item| item.0 == id)
+            .map(|item| item.1.as_ref())
+    }
+
+    pub fn fixture_mut(&mut self, id: FixtureId) -> Option<&mut Fixture<T, D>> {
+        self.fixture_list
+            .iter_mut()
+            .find(|item| item.0 == id)
+            .map(|item| item.1.as_mut())
     }
 
     fn reset_mass(&mut self) {
@@ -554,7 +536,7 @@ impl<T: Real, D> Body<T, D> {
         assert_eq!(self.type_, BodyType::Dynamic);
 
         let mut local_center = Vector2::zero();
-        for f in &self.fixture_list {
+        for (_, f) in &self.fixture_list {
             if f.density() == T::zero() {
                 continue;
             }
@@ -605,13 +587,12 @@ impl<T: Real, D> Body<T, D> {
         &mut self.data
     }
 
-    pub fn create_fixture<S: Shape<T> + 'static>(
-        &mut self,
-        def: FixtureDef<T, D, S>,
-    ) -> &mut Fixture<T, D> {
+    pub fn create_fixture<S: Shape<T> + 'static>(&mut self, def: FixtureDef<T, D, S>) -> FixtureId {
         unsafe {
             let shape = Box::new(def.shape);
             let child_count = shape.child_count();
+            let fixture_id = FixtureId(self.fixture_inc_id);
+            self.fixture_inc_id += 1;
             let fixture = Box::new(Fixture {
                 density: def.density,
                 body_ptr: self as *mut Body<T, D>,
@@ -623,20 +604,57 @@ impl<T: Real, D> Body<T, D> {
                 is_sensor: def.is_sensor,
                 data: def.data,
             });
-            self.fixture_list.push(fixture);
+            self.fixture_list.push((fixture_id, fixture));
 
-            let fixture = self.fixture_list.last_mut().unwrap().as_mut() as *mut Fixture<T, D>;
+            let fixture = &mut self.fixture_list.last_mut().unwrap().1;
             if self.flags.contains(BodyFlags::ACTIVE) {
-                (*fixture)
-                    .create_proxies(&mut (*self.world_ptr).contact_manager.broad_phase, self.xf);
+                fixture.create_proxies(&mut (*self.world_ptr).contact_manager.broad_phase, self.xf);
             }
 
-            if (*fixture).density > T::zero() {
+            if fixture.density > T::zero() {
                 self.reset_mass();
             }
 
             (*self.world_ptr).flags.insert(WorldFlags::NEW_FIXTURE);
-            fixture.as_mut().unwrap()
+            fixture_id
+        }
+    }
+
+    pub fn destroy_fixture(&mut self, id: FixtureId) {
+        if let Some(idx) = self
+            .fixture_list
+            .iter()
+            .enumerate()
+            .find(|(_, item)| item.0 == id)
+            .map(|(idx, _)| idx)
+        {
+            unsafe {
+                assert!(!(*self.world_ptr).flags.contains(WorldFlags::LOCKED));
+
+                let mut edge = self.contact_list_ptr;
+                while !edge.is_null() {
+                    let c = (*edge).contact_ptr;
+                    edge = (*edge).next_ptr;
+
+                    let fixture_a = (*c).fixture_a_ptr;
+                    let fixture_b = (*c).fixture_b_ptr;
+
+                    if self.fixture_list[idx].1.as_mut() as *mut Fixture<T, D> == fixture_a
+                        || self.fixture_list[idx].1.as_mut() as *mut Fixture<T, D> == fixture_b
+                    {
+                        (*self.world_ptr).contact_manager.destroy(c);
+                    }
+                }
+
+                if self.flags.contains(BodyFlags::ACTIVE) {
+                    self.fixture_list[idx]
+                        .1
+                        .destroy_proxies(&mut (*self.world_ptr).contact_manager.broad_phase);
+                }
+
+                self.fixture_list.remove(idx);
+                self.reset_mass();
+            }
         }
     }
 }
