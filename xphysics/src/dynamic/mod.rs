@@ -9,4 +9,7 @@ mod world;
 pub use body::{Body, BodyDef, BodyType, FixtureId};
 pub use contacts::{Contact, ContactFilter, ContactListener};
 pub use fixture::{Filter, Fixture, FixtureDef};
-pub use world::{BodyId, DebugDraw, DebugDrawFlags, DestructionListener, RayCastIter, World};
+pub use time_step::Profile;
+pub use world::{
+    BodyId, Color, DebugDraw, DebugDrawFlags, DestructionListener, RayCastIter, World,
+};

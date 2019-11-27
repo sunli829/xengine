@@ -51,24 +51,24 @@ bitflags! {
     pub struct DebugDrawFlags: u32 {
         const SHAPE = 0x0001;
         const AABB = 0x0002;
-        const CENTER_OF_MASS_BIT = 0x0004;
+        const CENTER_OF_MASS = 0x0004;
     }
 }
 
 pub trait DebugDraw {
-    fn draw_polygon(&self, vertices: &[Vector2<f32>], color: Color);
-    fn draw_solid_polygon(&self, vertices: &[Vector2<f32>], color: Color);
-    fn draw_circle(&self, center: &Vector2<f32>, radius: f32, color: Color);
+    fn draw_polygon(&mut self, vertices: &[Vector2<f32>], color: Color);
+    fn draw_solid_polygon(&mut self, vertices: &[Vector2<f32>], color: Color);
+    fn draw_circle(&mut self, center: &Vector2<f32>, radius: f32, color: Color);
     fn draw_solid_circle(
-        &self,
+        &mut self,
         center: &Vector2<f32>,
         radius: f32,
         axis: &Vector2<f32>,
         color: Color,
     );
-    fn draw_segment(&self, p1: &Vector2<f32>, p2: &Vector2<f32>, color: Color);
-    fn draw_transform(&self, xf: &Transform<f32>);
-    fn draw_point(&self, p: &Vector2<f32>, size: f32, color: Color);
+    fn draw_segment(&mut self, p1: &Vector2<f32>, p2: &Vector2<f32>, color: Color);
+    fn draw_transform(&mut self, xf: &Transform<f32>);
+    fn draw_point(&mut self, p: &Vector2<f32>, size: f32, color: Color);
 }
 
 pub(crate) struct WorldInner<T, D> {
@@ -724,8 +724,8 @@ impl<T: Real, D> World<T, D> {
         self.0.profile.step = timer.get_duration();
     }
 
-    pub fn draw_debug_data(&self) {
-        if let Some(dd) = &self.0.debug_draw {
+    pub fn draw_debug_data(&mut self) {
+        if let Some(dd) = &mut self.0.debug_draw {
             unsafe {
                 if self.0.debug_draw_flags.contains(DebugDrawFlags::SHAPE) {
                     let mut b = self.0.body_list;
@@ -738,15 +738,15 @@ impl<T: Real, D> World<T, D> {
                         let xf = (*b).transform();
                         for (_, f) in &(*b).fixture_list {
                             if !(*b).is_active() {
-                                self.draw_shape(f, xf, Color::rgb(0.5, 0.5, 0.3));
+                                Self::draw_shape(dd.as_mut(), f, xf, Color::rgb(0.5, 0.5, 0.3));
                             } else if (*b).body_type() == BodyType::Static {
-                                self.draw_shape(f, xf, Color::rgb(0.5, 0.9, 0.5));
+                                Self::draw_shape(dd.as_mut(), f, xf, Color::rgb(0.5, 0.9, 0.5));
                             } else if (*b).body_type() == BodyType::Kinematic {
-                                self.draw_shape(f, xf, Color::rgb(0.5, 0.5, 0.9));
+                                Self::draw_shape(dd.as_mut(), f, xf, Color::rgb(0.5, 0.5, 0.9));
                             } else if !(*b).is_awake() {
-                                self.draw_shape(f, xf, Color::rgb(0.6, 0.6, 0.6));
+                                Self::draw_shape(dd.as_mut(), f, xf, Color::rgb(0.6, 0.6, 0.6));
                             } else {
-                                self.draw_shape(f, xf, Color::rgb(0.9, 0.7, 0.7));
+                                Self::draw_shape(dd.as_mut(), f, xf, Color::rgb(0.9, 0.7, 0.7));
                             }
                         }
 
@@ -803,7 +803,7 @@ impl<T: Real, D> World<T, D> {
                 if self
                     .0
                     .debug_draw_flags
-                    .contains(DebugDrawFlags::CENTER_OF_MASS_BIT)
+                    .contains(DebugDrawFlags::CENTER_OF_MASS)
                 {
                     let mut b = self.0.body_list;
                     while !b.is_null() {
@@ -829,123 +829,119 @@ impl<T: Real, D> World<T, D> {
         }
     }
 
-    fn draw_shape(&self, f: &Fixture<T, D>, xf: &Transform<T>, color: Color) {
+    fn draw_shape(dd: &mut dyn DebugDraw, f: &Fixture<T, D>, xf: &Transform<T>, color: Color) {
         unsafe {
-            if let Some(dd) = &self.0.debug_draw {
-                match f.shape.shape_type() {
-                    ShapeType::Circle => {
-                        let circle = (f.shape.as_ref() as *const dyn Shape<T>
-                            as *const ShapeCircle<T>)
-                            .as_ref()
-                            .unwrap();
-                        let center = xf.multiply(circle.position);
-                        let radius = circle.radius;
-                        let axis = xf.q.multiply(Vector2::new(T::one(), T::zero()));
-                        dd.draw_solid_circle(
-                            &Vector2 {
-                                x: center.x.to_f32(),
-                                y: center.y.to_f32(),
-                            },
-                            radius.to_f32(),
-                            &Vector2::new(axis.x.to_f32(), axis.y.to_f32()),
-                            color,
+            match f.shape.shape_type() {
+                ShapeType::Circle => {
+                    let circle = (f.shape.as_ref() as *const dyn Shape<T> as *const ShapeCircle<T>)
+                        .as_ref()
+                        .unwrap();
+                    let center = xf.multiply(circle.position);
+                    let radius = circle.radius;
+                    let axis = xf.q.multiply(Vector2::new(T::one(), T::zero()));
+                    dd.draw_solid_circle(
+                        &Vector2 {
+                            x: center.x.to_f32(),
+                            y: center.y.to_f32(),
+                        },
+                        radius.to_f32(),
+                        &Vector2::new(axis.x.to_f32(), axis.y.to_f32()),
+                        color,
+                    );
+                }
+                ShapeType::Edge => {
+                    let edge = (f.shape.as_ref() as *const dyn Shape<T> as *const ShapeEdge<T>)
+                        .as_ref()
+                        .unwrap();
+                    let v1 = xf.multiply(edge.vertex1);
+                    let v2 = xf.multiply(edge.vertex2);
+                    dd.draw_segment(
+                        &Vector2 {
+                            x: v1.x.to_f32(),
+                            y: v1.y.to_f32(),
+                        },
+                        &Vector2 {
+                            x: v2.x.to_f32(),
+                            y: v2.y.to_f32(),
+                        },
+                        color,
+                    );
+                }
+                ShapeType::Polygon => {
+                    let polygon = (f.shape.as_ref() as *const dyn Shape<T>
+                        as *const ShapePolygon<T>)
+                        .as_ref()
+                        .unwrap();
+                    let mut vertices = [Vector2::<f32>::zero(); settings::MAX_POLYGON_VERTICES];
+                    for (i, vertex) in polygon.vertices.iter().enumerate() {
+                        let v = xf.multiply(*vertex);
+                        vertices[i] = Vector2::new(v.x.to_f32(), v.y.to_f32());
+                    }
+                    dd.draw_polygon(&vertices[0..polygon.vertices.len()], color);
+                }
+                ShapeType::Chain => {
+                    let chain = (f.shape.as_ref() as *const dyn Shape<T> as *const ShapeChain<T>)
+                        .as_ref()
+                        .unwrap();
+                    let count = chain.vertices.len();
+                    let vertices = &chain.vertices;
+                    let ghost_color =
+                        Color::rgba(0.75 * color.r, 0.75 * color.g, 0.75 * color.b, color.a);
+
+                    let mut v1 = xf.multiply(vertices[0]);
+                    dd.draw_point(
+                        &Vector2 {
+                            x: v1.x.to_f32(),
+                            y: v1.y.to_f32(),
+                        },
+                        4.0,
+                        color,
+                    );
+
+                    if let Some(prev_vertex) = &chain.prev_vertex {
+                        let vp = xf.multiply(*prev_vertex);
+                        dd.draw_segment(
+                            &Vector2::new(vp.x.to_f32(), vp.y.to_f32()),
+                            &Vector2::new(v1.x.to_f32(), v1.y.to_f32()),
+                            ghost_color,
+                        );
+                        dd.draw_circle(
+                            &Vector2::new(vp.x.to_f32(), vp.y.to_f32()),
+                            0.1,
+                            ghost_color,
                         );
                     }
-                    ShapeType::Edge => {
-                        let edge = (f.shape.as_ref() as *const dyn Shape<T> as *const ShapeEdge<T>)
-                            .as_ref()
-                            .unwrap();
-                        let v1 = xf.multiply(edge.vertex1);
-                        let v2 = xf.multiply(edge.vertex2);
+
+                    for i in 1..count {
+                        let v2 = xf.multiply(vertices[i]);
                         dd.draw_segment(
-                            &Vector2 {
-                                x: v1.x.to_f32(),
-                                y: v1.y.to_f32(),
-                            },
+                            &Vector2::new(v1.x.to_f32(), v1.y.to_f32()),
+                            &Vector2::new(v2.x.to_f32(), v2.y.to_f32()),
+                            ghost_color,
+                        );
+                        dd.draw_point(
                             &Vector2 {
                                 x: v2.x.to_f32(),
                                 y: v2.y.to_f32(),
                             },
-                            color,
-                        );
-                    }
-                    ShapeType::Polygon => {
-                        let polygon = (f.shape.as_ref() as *const dyn Shape<T>
-                            as *const ShapePolygon<T>)
-                            .as_ref()
-                            .unwrap();
-                        let mut vertices = [Vector2::<f32>::zero(); settings::MAX_POLYGON_VERTICES];
-                        for (i, vertex) in polygon.vertices.iter().enumerate() {
-                            let v = xf.multiply(*vertex);
-                            vertices[i] = Vector2::new(v.x.to_f32(), v.y.to_f32());
-                        }
-                        dd.draw_polygon(&vertices[0..polygon.vertices.len()], color);
-                    }
-                    ShapeType::Chain => {
-                        let chain = (f.shape.as_ref() as *const dyn Shape<T>
-                            as *const ShapeChain<T>)
-                            .as_ref()
-                            .unwrap();
-                        let count = chain.vertices.len();
-                        let vertices = &chain.vertices;
-                        let ghost_color =
-                            Color::rgba(0.75 * color.r, 0.75 * color.g, 0.75 * color.b, color.a);
-
-                        let mut v1 = xf.multiply(vertices[0]);
-                        dd.draw_point(
-                            &Vector2 {
-                                x: v1.x.to_f32(),
-                                y: v1.y.to_f32(),
-                            },
                             4.0,
                             color,
                         );
+                        v1 = v2;
+                    }
 
-                        if let Some(prev_vertex) = &chain.prev_vertex {
-                            let vp = xf.multiply(*prev_vertex);
-                            dd.draw_segment(
-                                &Vector2::new(vp.x.to_f32(), vp.y.to_f32()),
-                                &Vector2::new(v1.x.to_f32(), v1.y.to_f32()),
-                                ghost_color,
-                            );
-                            dd.draw_circle(
-                                &Vector2::new(vp.x.to_f32(), vp.y.to_f32()),
-                                0.1,
-                                ghost_color,
-                            );
-                        }
-
-                        for i in 1..count {
-                            let v2 = xf.multiply(vertices[i]);
-                            dd.draw_segment(
-                                &Vector2::new(v1.x.to_f32(), v1.y.to_f32()),
-                                &Vector2::new(v2.x.to_f32(), v2.y.to_f32()),
-                                ghost_color,
-                            );
-                            dd.draw_point(
-                                &Vector2 {
-                                    x: v2.x.to_f32(),
-                                    y: v2.y.to_f32(),
-                                },
-                                4.0,
-                                color,
-                            );
-                            v1 = v2;
-                        }
-
-                        if let Some(next_vertex) = &chain.next_vertex {
-                            let vn = xf.multiply(*next_vertex);
-                            dd.draw_segment(
-                                &Vector2::new(v1.x.to_f32(), v1.y.to_f32()),
-                                &Vector2::new(vn.x.to_f32(), vn.y.to_f32()),
-                                ghost_color,
-                            );
-                            dd.draw_circle(
-                                &Vector2::new(vn.x.to_f32(), vn.y.to_f32()),
-                                0.1,
-                                ghost_color,
-                            );
-                        }
+                    if let Some(next_vertex) = &chain.next_vertex {
+                        let vn = xf.multiply(*next_vertex);
+                        dd.draw_segment(
+                            &Vector2::new(v1.x.to_f32(), v1.y.to_f32()),
+                            &Vector2::new(vn.x.to_f32(), vn.y.to_f32()),
+                            ghost_color,
+                        );
+                        dd.draw_circle(
+                            &Vector2::new(vn.x.to_f32(), vn.y.to_f32()),
+                            0.1,
+                            ghost_color,
+                        );
                     }
                 }
             }
@@ -965,6 +961,10 @@ impl<T: Real, D> World<T, D> {
         RayCastIter {
             iter: self.0.contact_manager.broad_phase.tree.ray_cast(input),
         }
+    }
+
+    pub fn profile(&self) -> &Profile {
+        &self.0.profile
     }
 }
 
