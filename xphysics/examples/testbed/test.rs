@@ -2,7 +2,7 @@ use crate::debug_draw::NvgDebugDraw;
 use std::cell::RefCell;
 use std::rc::Rc;
 use xmath::{Real, Vector2};
-use xphysics::World;
+use xphysics::{DebugDrawFlags, World};
 
 pub struct TestSetting<T> {
     hz: T,
@@ -91,13 +91,10 @@ impl<T: Real> Test<T> {
         }
 
         self.world.set_debug_draw_flags({
-            let mut flags = xphysics::DebugDrawFlags::empty();
-            flags.set(xphysics::DebugDrawFlags::SHAPE, settings.draw_shapes);
-            flags.set(xphysics::DebugDrawFlags::AABB, settings.draw_aabbs);
-            flags.set(
-                xphysics::DebugDrawFlags::CENTER_OF_MASS,
-                settings.draw_center_of_mass,
-            );
+            let mut flags = DebugDrawFlags::empty();
+            flags.set(DebugDrawFlags::SHAPE, settings.draw_shapes);
+            flags.set(DebugDrawFlags::AABB, settings.draw_aabbs);
+            flags.set(DebugDrawFlags::CENTER_OF_MASS, settings.draw_center_of_mass);
             flags
         });
 

@@ -1,5 +1,6 @@
 mod debug_draw;
 mod test;
+mod tests;
 
 fn main() {
     let el = glutin::event_loop::EventLoop::new();

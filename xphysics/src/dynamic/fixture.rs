@@ -20,7 +20,7 @@ impl Default for Filter {
 
 pub struct FixtureDef<T, D, S> {
     pub shape: S,
-    pub data: D,
+    pub data: Option<D>,
     pub friction: T,
     pub restitution: T,
     pub density: T,
@@ -28,14 +28,14 @@ pub struct FixtureDef<T, D, S> {
     pub filter: Filter,
 }
 
-impl<T: Real, D: Default, S: Shape<T> + 'static> FixtureDef<T, D, S> {
-    pub fn new(shape: S) -> Self {
+impl<T: Real, D, S: Shape<T> + 'static> FixtureDef<T, D, S> {
+    pub fn new(shape: S, density: T) -> Self {
         Self {
             shape,
-            data: Default::default(),
+            data: None,
             friction: T::two() * T::en1(),
             restitution: T::zero(),
-            density: T::zero(),
+            density,
             is_sensor: false,
             filter: Default::default(),
         }
@@ -58,7 +58,7 @@ pub struct Fixture<T, D> {
     pub(crate) proxies: Vec<Box<FixtureProxy<T, D>>>,
     pub(crate) filter: Filter,
     pub(crate) is_sensor: bool,
-    pub(crate) data: D,
+    pub(crate) data: Option<D>,
 }
 
 impl<T: Real, D> Fixture<T, D> {
@@ -123,16 +123,16 @@ impl<T: Real, D> Fixture<T, D> {
         &self.filter
     }
 
-    pub fn data(&self) -> &D {
-        &self.data
+    pub fn data(&self) -> Option<&D> {
+        self.data.as_ref()
     }
 
-    pub fn data_mut(&mut self) -> &mut D {
-        &mut self.data
+    pub fn data_mut(&mut self) -> Option<&mut D> {
+        self.data.as_mut()
     }
 
     pub fn set_data(&mut self, data: D) {
-        self.data = data;
+        self.data = Some(data);
     }
 
     pub fn density(&self) -> T {

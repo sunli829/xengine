@@ -8,8 +8,8 @@ use crate::dynamic::island::Island;
 use crate::dynamic::time_step::{Profile, TimeStep};
 use crate::timer::Timer;
 use crate::{
-    settings, Body, BodyType, Fixture, RayCastInput, Shape, ShapeChain, ShapeCircle, ShapeEdge,
-    ShapePolygon, ShapeType,
+    settings, Body, BodyType, Fixture, FixtureDef, RayCastInput, Shape, ShapeChain, ShapeCircle,
+    ShapeEdge, ShapePolygon, ShapeType,
 };
 use slab::Slab;
 use xmath::{Multiply, Real, Rotation, Transform, Vector2, AABB};
@@ -200,6 +200,60 @@ impl<T: Real, D> World<T, D> {
             }
             self.0.body_list = body;
             self.0.body_count += 1;
+            BodyId(id)
+        }
+    }
+
+    pub fn create_body_with_fixture<S: Shape<T> + 'static>(
+        &mut self,
+        def: BodyDef<T, D>,
+        fixture_def: FixtureDef<T, D, S>,
+    ) -> BodyId {
+        unsafe {
+            let world_ptr = self.0.as_mut() as *mut WorldInner<T, D>;
+            let id = self.0.bodies_slab.insert(Body::new(world_ptr, def));
+            let body = self.0.bodies_slab.get_unchecked_mut(id);
+
+            body.prev_ptr = std::ptr::null_mut();
+            body.next_ptr = self.0.body_list;
+            if !self.0.body_list.is_null() {
+                (*self.0.body_list).prev_ptr = body;
+            }
+            self.0.body_list = body;
+            self.0.body_count += 1;
+
+            body.create_fixture(fixture_def);
+
+            BodyId(id)
+        }
+    }
+
+    pub fn create_body_with_fixtures<S, IT>(
+        &mut self,
+        def: BodyDef<T, D>,
+        fixtures_def: IT,
+    ) -> BodyId
+    where
+        S: Shape<T> + 'static,
+        IT: IntoIterator<Item = FixtureDef<T, D, S>>,
+    {
+        unsafe {
+            let world_ptr = self.0.as_mut() as *mut WorldInner<T, D>;
+            let id = self.0.bodies_slab.insert(Body::new(world_ptr, def));
+            let body = self.0.bodies_slab.get_unchecked_mut(id);
+
+            body.prev_ptr = std::ptr::null_mut();
+            body.next_ptr = self.0.body_list;
+            if !self.0.body_list.is_null() {
+                (*self.0.body_list).prev_ptr = body;
+            }
+            self.0.body_list = body;
+            self.0.body_count += 1;
+
+            for fixture_def in fixtures_def {
+                body.create_fixture(fixture_def);
+            }
+
             BodyId(id)
         }
     }

@@ -27,11 +27,11 @@ pub struct BodyDef<T, D> {
     pub fixed_rotation: bool,
     pub bullet: bool,
     pub active: bool,
-    pub data: D,
+    pub data: Option<D>,
     pub gravity_scale: T,
 }
 
-impl<T: Real, D: Default> Default for BodyDef<T, D> {
+impl<T: Real, D> Default for BodyDef<T, D> {
     fn default() -> Self {
         BodyDef {
             type_: BodyType::Static,
@@ -46,7 +46,7 @@ impl<T: Real, D: Default> Default for BodyDef<T, D> {
             fixed_rotation: false,
             bullet: false,
             active: true,
-            data: Default::default(),
+            data: None,
             gravity_scale: T::one(),
         }
     }
@@ -92,7 +92,7 @@ pub struct Body<T, D> {
     pub(crate) angular_damping: T,
     pub(crate) gravity_scale: T,
     pub(crate) sleep_time: T,
-    pub(crate) data: D,
+    pub(crate) data: Option<D>,
 }
 
 impl<T: Real, D> Body<T, D> {
@@ -579,12 +579,16 @@ impl<T: Real, D> Body<T, D> {
         }
     }
 
-    pub fn data(&self) -> &D {
-        &self.data
+    pub fn data(&self) -> Option<&D> {
+        self.data.as_ref()
     }
 
-    pub fn data_mut(&mut self) -> &mut D {
-        &mut self.data
+    pub fn data_mut(&mut self) -> Option<&mut D> {
+        self.data.as_mut()
+    }
+
+    pub fn set_data(&mut self, data: D) {
+        self.data = Some(data);
     }
 
     pub fn create_fixture<S: Shape<T> + 'static>(&mut self, def: FixtureDef<T, D, S>) -> FixtureId {
@@ -618,6 +622,14 @@ impl<T: Real, D> Body<T, D> {
             (*self.world_ptr).flags.insert(WorldFlags::NEW_FIXTURE);
             fixture_id
         }
+    }
+
+    pub fn create_fixture_with_shape<S: Shape<T> + 'static>(
+        &mut self,
+        shape: S,
+        density: T,
+    ) -> FixtureId {
+        self.create_fixture(FixtureDef::new(shape, density))
     }
 
     pub fn destroy_fixture(&mut self, id: FixtureId) {

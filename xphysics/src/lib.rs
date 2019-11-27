@@ -16,15 +16,12 @@ mod tests {
 
     fn create_body(world: &mut World<f32, i32>, position: Vector2<f32>) -> BodyId {
         let id = world.create_body(BodyDef {
-            data: 10,
+            data: None,
             type_: BodyType::Dynamic,
             ..BodyDef::default()
         });
         let body = world.body_mut(id).unwrap();
-        body.create_fixture(FixtureDef {
-            density: 1.0,
-            ..FixtureDef::new(ShapeCircle::new(position, 50.0))
-        });
+        body.create_fixture(FixtureDef::new(ShapeCircle::new(position, 50.0), 1.0));
         id
     }
 
