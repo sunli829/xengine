@@ -940,7 +940,7 @@ impl<T: Real, D> World<T, D> {
                         let v = xf.multiply(*vertex);
                         vertices[i] = Vector2::new(v.x.to_f32(), v.y.to_f32());
                     }
-                    dd.draw_polygon(&vertices[0..polygon.vertices.len()], color);
+                    dd.draw_solid_polygon(&vertices[0..polygon.vertices.len()], color);
                 }
                 ShapeType::Chain => {
                     let chain = (f.shape.as_ref() as *const dyn Shape<T> as *const ShapeChain<T>)

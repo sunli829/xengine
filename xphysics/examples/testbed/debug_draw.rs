@@ -29,9 +29,9 @@ impl xphysics::DebugDraw for NvgDebugDraw {
     fn draw_polygon(&mut self, vertices: &[Vector2<f32>], color: xphysics::Color) {
         let mut ctx = self.ctx.borrow_mut();
         ctx.begin_path();
-        ctx.move_to((vertices[0].x, vertices[0].y));
+        ctx.move_to(self.transform_pt((vertices[0].x, vertices[0].y).into()));
         for v in &vertices[1..] {
-            ctx.line_to((v.x, v.y));
+            ctx.line_to(self.transform_pt((v.x, v.y).into()));
         }
         ctx.close_path();
         ctx.stroke_paint(to_nvg_color(color));
@@ -42,9 +42,9 @@ impl xphysics::DebugDraw for NvgDebugDraw {
     fn draw_solid_polygon(&mut self, vertices: &[Vector2<f32>], color: xphysics::Color) {
         let mut ctx = self.ctx.borrow_mut();
         ctx.begin_path();
-        ctx.move_to((vertices[0].x, vertices[0].y));
+        ctx.move_to(self.transform_pt((vertices[0].x, vertices[0].y).into()));
         for v in &vertices[1..] {
-            ctx.line_to((v.x, v.y));
+            ctx.line_to(self.transform_pt((v.x, v.y).into()));
         }
         ctx.close_path();
         ctx.fill_paint(to_nvg_color(color));
@@ -54,7 +54,7 @@ impl xphysics::DebugDraw for NvgDebugDraw {
     fn draw_circle(&mut self, center: &Vector2<f32>, radius: f32, color: xphysics::Color) {
         let mut ctx = self.ctx.borrow_mut();
         ctx.begin_path();
-        ctx.circle((center.x, center.y), radius);
+        ctx.circle(self.transform_pt((center.x, center.y).into()), radius);
         ctx.stroke_paint(to_nvg_color(color));
         ctx.stroke_width(1.0);
         ctx.stroke().unwrap();
@@ -69,13 +69,13 @@ impl xphysics::DebugDraw for NvgDebugDraw {
     ) {
         let mut ctx = self.ctx.borrow_mut();
         ctx.begin_path();
-        ctx.circle((center.x, center.y), radius);
+        ctx.circle(self.transform_pt((center.x, center.y).into()), radius);
         ctx.fill_paint(to_nvg_color(color));
         ctx.fill().unwrap();
 
         let p = *center + *axis * radius;
         ctx.begin_path();
-        ctx.move_to((center.x, center.y));
+        ctx.move_to(self.transform_pt((center.x, center.y).into()));
         ctx.line_to((p.x, p.y));
         ctx.stroke_paint(to_nvg_color(color));
         ctx.stroke_width(1.0);
@@ -99,7 +99,10 @@ impl xphysics::DebugDraw for NvgDebugDraw {
     fn draw_point(&mut self, p: &Vector2<f32>, size: f32, color: xphysics::Color) {
         let mut ctx = self.ctx.borrow_mut();
         ctx.begin_path();
-        ctx.rect((p.x - size / 2.0, p.y - size / 2.0, size, size));
+        ctx.rect(nvg::Rect::new(
+            self.transform_pt((p.x - size / 2.0, p.y - size / 2.0).into()),
+            nvg::Extent::new(size, size),
+        ));
         ctx.fill_paint(to_nvg_color(color));
         ctx.fill().unwrap();
     }

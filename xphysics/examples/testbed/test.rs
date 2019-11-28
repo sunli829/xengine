@@ -29,7 +29,7 @@ pub struct TestSetting<T> {
 impl<T: Real> Default for TestSetting<T> {
     fn default() -> Self {
         Self {
-            hz: T::f32(60.0),
+            hz: T::f32(720.0),
             velocity_iterations: 8,
             position_iterations: 3,
             draw_shapes: true,
