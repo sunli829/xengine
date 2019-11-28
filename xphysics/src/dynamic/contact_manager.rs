@@ -117,7 +117,7 @@ impl<T: Real, D> ContactManager<T, D> {
                     return;
                 }
 
-                if self
+                if !self
                     .contact_filter
                     .should_collide(fixture_a.as_ref().unwrap(), fixture_b.as_ref().unwrap())
                 {
@@ -172,7 +172,7 @@ impl<T: Real, D> ContactManager<T, D> {
             let mut c = self.contact_list;
             while !c.is_null() {
                 let fixture_a = (*c).fixture_a_ptr;
-                let fixture_b = (*c).fixture_a_ptr;
+                let fixture_b = (*c).fixture_b_ptr;
                 let index_a = (*c).child_index_a();
                 let index_b = (*c).child_index_b();
                 let body_a = (*fixture_a).body_ptr;

@@ -1,4 +1,4 @@
-use crate::{Multiply, Real, TransposeMultiply, Vector2};
+use crate::{Multiply, Real, Vector2};
 use std::ops::{Mul, MulAssign};
 
 #[derive(Debug, Copy, Clone, Default)]

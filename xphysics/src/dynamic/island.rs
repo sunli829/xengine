@@ -62,6 +62,9 @@ impl<'a, T: Real, D> Island<'a, T, D> {
                 let mut v = *(*b).linear_velocity();
                 let mut w = (*b).angular_velocity();
 
+                (*b).sweep.c0 = (*b).sweep.c;
+                (*b).sweep.a0 = (*b).sweep.a;
+
                 if (*b).body_type() == BodyType::Dynamic {
                     v += ((*b).force * (*b).inv_mass + gravity * (*b).gravity_scale()) * h;
                     w += (*b).inv_i * (*b).torque * h;

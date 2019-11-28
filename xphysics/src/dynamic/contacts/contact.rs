@@ -250,7 +250,7 @@ impl<T: Real, D> Contact<T, D> {
             std::ptr::copy_nonoverlapping(
                 &contact as *const Contact<T, D>,
                 data as *mut Contact<T, D>,
-                std::mem::size_of::<Contact<T, D>>(),
+                1,
             );
             data as *mut Contact<T, D>
         }

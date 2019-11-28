@@ -405,16 +405,18 @@ impl<T: Real, D> World<T, D> {
                         continue;
                     }
 
-                    let ce = (*b).contact_list_ptr;
+                    let mut ce = (*b).contact_list_ptr;
                     while !ce.is_null() {
                         let contact = (*ce).contact_ptr;
                         if !(*contact).is_enable() || !(*contact).is_touching() {
+                            ce = (*ce).next_ptr;
                             continue;
                         }
 
                         let sensor_a = (*(*contact).fixture_a_ptr).is_sensor;
                         let sensor_b = (*(*contact).fixture_b_ptr).is_sensor;
                         if sensor_a || sensor_b {
+                            ce = (*ce).next_ptr;
                             continue;
                         }
 
@@ -423,14 +425,14 @@ impl<T: Real, D> World<T, D> {
 
                         let other = (*ce).other_ptr;
                         if (*other).flags.contains(BodyFlags::ISLAND) {
+                            ce = (*ce).next_ptr;
                             continue;
                         }
 
                         stack.push(other);
                         (*other).flags.insert(BodyFlags::ISLAND);
+                        ce = (*ce).next_ptr;
                     }
-
-                    seed = (*seed).next_ptr;
                 }
 
                 let mut profile = Profile::default();
@@ -445,6 +447,8 @@ impl<T: Real, D> World<T, D> {
                         (*b).flags.remove(BodyFlags::ISLAND);
                     }
                 }
+
+                seed = (*seed).next_ptr;
             }
 
             let timer = Timer::new();
@@ -578,6 +582,7 @@ impl<T: Real, D> World<T, D> {
 
                         (*c).toi = alpha;
                         (*c).flags.insert(ContactFlags::TOI);
+                        c = (*c).next_ptr;
                     }
 
                     if alpha < min_alpha {
@@ -739,7 +744,7 @@ impl<T: Real, D> World<T, D> {
 
         if self.0.flags.contains(WorldFlags::NEW_FIXTURE) {
             self.0.contact_manager.find_new_contacts();
-            self.0.flags.remove(WorldFlags::NEW_FIXTURE)
+            self.0.flags.remove(WorldFlags::NEW_FIXTURE);
         }
 
         self.0.flags.insert(WorldFlags::LOCKED);
@@ -940,7 +945,7 @@ impl<T: Real, D> World<T, D> {
                         let v = xf.multiply(*vertex);
                         vertices[i] = Vector2::new(v.x.to_f32(), v.y.to_f32());
                     }
-                    dd.draw_solid_polygon(&vertices[0..polygon.vertices.len()], color);
+                    dd.draw_solid_polygon(&vertices[0..polygon.count], color);
                 }
                 ShapeType::Chain => {
                     let chain = (f.shape.as_ref() as *const dyn Shape<T> as *const ShapeChain<T>)
