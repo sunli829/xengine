@@ -1,6 +1,7 @@
 use crate::collision::distance::{distance, DistanceInput, DistanceProxy, SimpleCache};
+use crate::math::Sweep;
 use crate::settings;
-use xmath::{CrossTrait, DotTrait, Multiply, Real, Sweep, Transform, TransposeMultiply, Vector2};
+use xmath::{CrossTrait, DotTrait, Multiply, Real, Transform, TransposeMultiply, Vector2};
 
 pub struct TOIInput<'a, T: Real> {
     pub proxy_a: &'a DistanceProxy<'a, T>,
@@ -230,8 +231,8 @@ pub fn time_of_impact<T: Real>(input: TOIInput<'_, T>) -> TOIOutput<T> {
     let max = input.max;
 
     let total_radius = proxy_a.radius + proxy_b.radius;
-    let target = settings::linear_slop::<T>()
-        .max(total_radius - T::i32(3) * settings::linear_slop::<T>());
+    let target =
+        settings::linear_slop::<T>().max(total_radius - T::i32(3) * settings::linear_slop::<T>());
     let tolerance = T::f32(0.25) * settings::linear_slop::<T>();
     assert!(target > tolerance);
 

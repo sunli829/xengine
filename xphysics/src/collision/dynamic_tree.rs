@@ -4,7 +4,8 @@ use xmath::{CrossTrait, DotTrait, Real, Vector2, AABB};
 
 const QUERY_STACK_INIT_SIZE: usize = 256;
 
-struct Node<T, D = ()> {
+#[derive(Debug)]
+struct Node<T, D> {
     aabb: AABB<T>,
     data: Option<D>,
     link: Option<usize>,
@@ -64,6 +65,7 @@ impl<T: Real, D> DynamicTree<T, D> {
                 if self.nodes[parent].child1 == Some(a) {
                     self.nodes[parent].child1 = Some(c);
                 } else {
+                    assert_eq!(self.nodes[parent].child2, Some(a));
                     self.nodes[parent].child2 = Some(c);
                 }
             } else {
@@ -107,6 +109,7 @@ impl<T: Real, D> DynamicTree<T, D> {
                 if self.nodes[parent].child1 == Some(a) {
                     self.nodes[parent].child1 = Some(b);
                 } else {
+                    assert_eq!(self.nodes[parent].child2, Some(a));
                     self.nodes[parent].child2 = Some(b);
                 }
             } else {
@@ -173,7 +176,7 @@ impl<T: Real, D> DynamicTree<T, D> {
                 (new_area - old_area) + inheritance_cost
             };
 
-            let child2_node = &self.nodes[child1];
+            let child2_node = &self.nodes[child2];
             let cost2 = if child2_node.is_leaf() {
                 leaf_aabb.combine(&child2_node.aabb).perimeter() + inheritance_cost
             } else {
@@ -267,7 +270,7 @@ impl<T: Real, D> DynamicTree<T, D> {
             } else {
                 self.nodes[grand_parent].child2 = sibling;
             }
-            self.nodes[grand_parent].link = sibling;
+            self.nodes[sibling.unwrap()].link = Some(grand_parent);
             self.nodes.remove(parent);
 
             let mut index = Some(grand_parent);
@@ -290,11 +293,14 @@ impl<T: Real, D> DynamicTree<T, D> {
     }
 
     pub fn remove_proxy(&mut self, id: usize) {
+        assert!(self.nodes[id].is_leaf());
         self.remove_leaf(id);
         self.nodes.remove(id);
     }
 
     pub fn move_proxy(&mut self, id: usize, aabb: AABB<T>, displacement: Vector2<T>) -> bool {
+        assert!(self.nodes[id].is_leaf());
+
         if self.nodes[id].aabb.contains(&aabb) {
             return false;
         }
@@ -310,13 +316,13 @@ impl<T: Real, D> DynamicTree<T, D> {
         if d.x < T::zero() {
             b.lower_bound.x += d.x;
         } else {
-            b.lower_bound.x += d.x;
+            b.upper_bound.x += d.x;
         }
 
         if d.y < T::zero() {
             b.lower_bound.y += d.y;
         } else {
-            b.lower_bound.y += d.y;
+            b.upper_bound.y += d.y;
         }
 
         self.nodes[id].aabb = b;
@@ -451,5 +457,39 @@ impl<'a, T: Real, D> Iterator for RayCastIter<'a, T, D> {
             self.stack.push(node.child2.unwrap());
         }
         None
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test() {
+        let mut tree = DynamicTree::<f32, ()>::new();
+        for i in 0..100 {
+            for j in 0..100 {
+                println!("create {}, {}", i, j);
+                tree.create_proxy(
+                    AABB::new(
+                        (i as f32, j as f32).into(),
+                        (i as f32 + 20.0, j as f32 + 20.0).into(),
+                    ),
+                    (),
+                );
+            }
+        }
+
+        let id = tree.create_proxy(AABB::new((100.0, 100.0).into(), (200.0, 200.0).into()), ());
+        for i in 0..1000 {
+            tree.move_proxy(
+                id,
+                AABB::new(
+                    (i as f32 * 10.0, i as f32 * 10.0).into(),
+                    (i as f32 * 10.0 + 10.0, i as f32 * 10.0 + 10.0).into(),
+                ),
+                Vector2::zero(),
+            );
+        }
     }
 }

@@ -1,4 +1,4 @@
-use crate::{Multiply, Real, Rotation, Transform, Vector2};
+use xmath::{Multiply, Real, Rotation, Transform, Vector2};
 
 #[derive(Debug, Copy, Clone, Default)]
 pub struct Sweep<T> {

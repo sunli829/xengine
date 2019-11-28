@@ -1,4 +1,5 @@
-use crate::{DotTrait, Multiply, Real, TransposeMultiply, Vector2};
+use xmath::{DotTrait, Multiply, Real, TransposeMultiply, Vector2};
+
 
 #[derive(Debug, Copy, Clone, Default)]
 pub struct Matrix22<T> {
@@ -11,6 +12,7 @@ impl<T: Real> Matrix22<T> {
         Matrix22 { ex, ey }
     }
 
+    #[allow(dead_code)]
     pub fn identity() -> Matrix22<T> {
         Matrix22 {
             ex: Vector2 {

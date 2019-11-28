@@ -1,7 +1,7 @@
-use crate::debug_draw::NvgDebugDraw;
 use crate::test::{Test, TestSetting};
 use crate::tests::CharacterCollision;
 
+mod camera;
 mod debug_draw;
 mod test;
 mod tests;
@@ -34,7 +34,12 @@ fn main() {
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT | gl::STENCIL_BUFFER_BIT);
         }
 
-        test.step(&mut settings, device_pixel_ratio);
+        test.step(
+            &mut settings,
+            size.width as f32,
+            size.height as f32,
+            device_pixel_ratio,
+        );
         windowed_context.swap_buffers().unwrap();
 
         match event {

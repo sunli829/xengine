@@ -5,6 +5,7 @@ mod collision;
 mod dynamic;
 mod settings;
 mod timer;
+mod math;
 
 pub use collision::*;
 pub use dynamic::*;

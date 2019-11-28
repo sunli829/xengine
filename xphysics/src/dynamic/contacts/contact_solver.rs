@@ -1,8 +1,9 @@
 use crate::dynamic::contacts::Contact;
 use crate::dynamic::time_step::{Position, TimeStep, Velocity};
+use crate::math::Matrix22;
 use crate::{settings, ManifoldType, WorldManifold};
 use xmath::{
-    CrossTrait, DotTrait, Matrix22, Multiply, Real, Rotation, Transform, TransposeMultiply, Vector2,
+    CrossTrait, DotTrait, Multiply, Real, Rotation, Transform, TransposeMultiply, Vector2,
 };
 
 const BLOCK_SOLVE: bool = true;

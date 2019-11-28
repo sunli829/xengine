@@ -1,6 +1,7 @@
+use crate::camera::Camera;
 use std::cell::RefCell;
 use std::rc::Rc;
-use xmath::{Transform, Vector2};
+use xmath::{Multiply, Transform, Vector2};
 
 fn to_nvg_color(color: xphysics::Color) -> nvg::Color {
     nvg::Color {
@@ -13,6 +14,15 @@ fn to_nvg_color(color: xphysics::Color) -> nvg::Color {
 
 pub struct NvgDebugDraw {
     pub ctx: Rc<RefCell<nvg::Context<nvg_gl::Renderer>>>,
+    pub camera: Rc<RefCell<Camera>>,
+}
+
+impl NvgDebugDraw {
+    fn transform_pt(&self, pt: Vector2<f32>) -> nvg::Point {
+        let mat = self.camera.borrow().matrix();
+        let pt2 = mat.multiply(pt);
+        (pt2.x, pt2.y).into()
+    }
 }
 
 impl xphysics::DebugDraw for NvgDebugDraw {
@@ -75,8 +85,8 @@ impl xphysics::DebugDraw for NvgDebugDraw {
     fn draw_segment(&mut self, p1: &Vector2<f32>, p2: &Vector2<f32>, color: xphysics::Color) {
         let mut ctx = self.ctx.borrow_mut();
         ctx.begin_path();
-        ctx.move_to((p1.x, p1.y));
-        ctx.line_to((p2.x, p2.y));
+        ctx.move_to(self.transform_pt(*p1));
+        ctx.line_to(self.transform_pt(*p2));
         ctx.stroke_paint(to_nvg_color(color));
         ctx.stroke_width(1.0);
         ctx.stroke().unwrap();

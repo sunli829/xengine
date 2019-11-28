@@ -1,10 +1,11 @@
 use crate::dynamic::contacts::ContactEdge;
 use crate::dynamic::fixture::FixtureDef;
 use crate::dynamic::world::{WorldFlags, WorldInner};
+use crate::math::Sweep;
 use crate::Shape;
 use crate::{Fixture, MassData};
 use xmath::{
-    CrossTrait, DotTrait, Multiply, Real, Rotation, Sweep, Transform, TransposeMultiply, Vector2,
+    CrossTrait, DotTrait, Multiply, Real, Rotation, Transform, TransposeMultiply, Vector2,
 };
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]

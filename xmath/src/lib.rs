@@ -1,20 +1,16 @@
 mod aabb;
 mod float32;
-mod matrix22;
 mod matrix33;
 mod real;
 mod rotation;
-mod sweep;
 mod transform;
 mod vector2;
 mod vector3;
 
 pub use aabb::*;
-pub use matrix22::*;
 pub use matrix33::*;
 pub use real::*;
 pub use rotation::*;
-pub use sweep::*;
 pub use transform::*;
 pub use vector2::*;
 pub use vector3::*;

@@ -1,4 +1,6 @@
+use crate::camera::Camera;
 use crate::debug_draw::NvgDebugDraw;
+use glutin::CreationError::Window;
 use std::cell::RefCell;
 use std::rc::Rc;
 use xmath::{Real, Vector2};
@@ -54,6 +56,7 @@ pub trait TestImpl<T> {
 
 pub struct Test<T, I> {
     ctx: Rc<RefCell<nvg::Context<nvg_gl::Renderer>>>,
+    camera: Rc<RefCell<Camera>>,
     test_impl: I,
     pub world: World<T, ()>,
 }
@@ -65,9 +68,14 @@ impl<T: Real, I: TestImpl<T>> Test<T, I> {
         let ctx = Rc::new(RefCell::new(
             nvg::Context::create(nvg_gl::Renderer::create().unwrap()).unwrap(),
         ));
-        world.set_debug_draw(NvgDebugDraw { ctx: ctx.clone() });
+        let camera = Rc::new(RefCell::new(Camera::default()));
+        world.set_debug_draw(NvgDebugDraw {
+            ctx: ctx.clone(),
+            camera: camera.clone(),
+        });
         Test {
             ctx,
+            camera,
             test_impl,
             world,
         }
@@ -76,15 +84,15 @@ impl<T: Real, I: TestImpl<T>> Test<T, I> {
     pub fn step(
         &mut self,
         settings: &mut TestSetting<T>,
+        window_width: f32,
+        window_height: f32,
         device_pixel_ratio: f32,
     ) {
         self.ctx
             .borrow_mut()
-            .begin_frame((40, 40), device_pixel_ratio)
+            .begin_frame((window_width, window_height), device_pixel_ratio)
             .unwrap();
-        self.ctx
-            .borrow_mut()
-            .transform(nvg::Transform::translate(20.0, 20.0));
+        self.camera.borrow_mut().window_size = (window_width, window_height).into();
 
         let mut time_step = if settings.hz > T::zero() {
             T::one() / settings.hz

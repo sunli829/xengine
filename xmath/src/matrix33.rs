@@ -1,98 +1,108 @@
-use crate::{CrossTrait, DotTrait, Real, Vector2, Vector3};
+use crate::{Multiply, Real, TransposeMultiply, Vector2};
+use std::ops::{Mul, MulAssign};
 
 #[derive(Debug, Copy, Clone, Default)]
-pub struct Matrix33<T> {
-    pub ex: Vector3<T>,
-    pub ey: Vector3<T>,
-    pub ez: Vector3<T>,
-}
+pub struct Matrix33<T>(pub [T; 6]);
 
 impl<T: Real> Matrix33<T> {
-    pub fn new(ex: Vector3<T>, ey: Vector3<T>, ez: Vector3<T>) -> Matrix33<T> {
-        Matrix33 { ex, ey, ez }
+    pub fn identity() -> Matrix33<T> {
+        Matrix33([
+            T::f32(1.0),
+            T::f32(0.0),
+            T::f32(0.0),
+            T::f32(1.0),
+            T::f32(0.0),
+            T::f32(0.0),
+        ])
     }
 
-    pub fn zero() -> Matrix33<T> {
-        Matrix33 {
-            ex: Vector3::zero(),
-            ey: Vector3::zero(),
-            ez: Vector3::zero(),
-        }
+    pub fn translate(tx: T, ty: T) -> Matrix33<T> {
+        Matrix33([T::f32(1.0), T::f32(0.0), T::f32(0.0), T::f32(1.0), tx, ty])
     }
 
-    pub fn solve33(&self, b: Vector3<T>) -> Vector3<T> {
-        let mut det = self.ex.dot(self.ey.cross(self.ez));
-        if det != T::zero() {
-            det = T::one() / det;
-        }
-        Vector3 {
-            x: det * b.dot(self.ey.cross(self.ez)),
-            y: det * self.ex.dot(b.cross(self.ez)),
-            z: det * self.ex.dot(self.ey.cross(b)),
-        }
+    pub fn scale(sx: T, sy: T) -> Matrix33<T> {
+        Matrix33([sx, T::f32(0.0), T::f32(0.0), sy, T::f32(0.0), T::f32(0.0)])
     }
 
-    pub fn solve22(&self, b: Vector2<T>) -> Vector2<T> {
-        let a11 = self.ex.x;
-        let a12 = self.ey.x;
-        let a21 = self.ex.y;
-        let a22 = self.ey.y;
-        let mut det = a11 * a22 - a12 * a21;
-        if det != T::zero() {
-            det = T::one() / det;
-        }
-        Vector2 {
-            x: det * (a22 * b.x - a12 * b.y),
-            y: det * (a11 * b.y - a21 * b.x),
-        }
+    pub fn rotate(a: T) -> Matrix33<T> {
+        let cs = a.cos();
+        let sn = a.sin();
+        Matrix33([cs, sn, -sn, cs, T::f32(0.0), T::f32(0.0)])
     }
 
-    pub fn inverse22(&self) -> Matrix33<T> {
-        let a = self.ex.x;
-        let b = self.ey.x;
-        let c = self.ex.y;
-        let d = self.ey.y;
-        let mut det = a * d - b * c;
-        if det != T::zero() {
-            det = T::one() / det;
-        }
-
-        Matrix33 {
-            ex: Vector3::new(det * d, -det * c, T::zero()),
-            ey: Vector3::new(-det * b, det * a, T::zero()),
-            ez: Vector3::new(T::zero(), T::zero(), T::zero()),
-        }
+    pub fn skew_x(a: T) -> Matrix33<T> {
+        Matrix33([
+            T::f32(1.0),
+            T::f32(0.0),
+            a.tan(),
+            T::f32(1.0),
+            T::f32(0.0),
+            T::f32(0.0),
+        ])
     }
 
-    pub fn symmetric_inverse(&self) -> Matrix33<T> {
-        let mut det = self.ex.dot(self.ey.cross(self.ez));
-        if det != T::zero() {
-            det = T::one() / det;
-        }
+    pub fn skew_y(a: T) -> Matrix33<T> {
+        Matrix33([
+            T::f32(1.0),
+            a.tan(),
+            T::f32(0.0),
+            T::f32(1.0),
+            T::f32(0.0),
+            T::f32(0.0),
+        ])
+    }
 
-        let a11 = self.ex.x;
-        let a12 = self.ey.x;
-        let a13 = self.ez.x;
-        let a22 = self.ey.y;
-        let a23 = self.ez.y;
-        let a33 = self.ez.z;
-
-        Matrix33 {
-            ex: Vector3::new(
-                det * (a22 * a33 - a23 * a23),
-                det * (a13 * a23 - a12 * a33),
-                det * (a12 * a23 - a13 * a22),
-            ),
-            ey: Vector3::new(
-                det * (a13 * a23 - a12 * a33),
-                det * (a11 * a33 - a13 * a13),
-                det * (a13 * a12 - a11 * a23),
-            ),
-            ez: Vector3::new(
-                det * (a12 * a23 - a13 * a22),
-                det * (a13 * a12 - a11 * a23),
-                det * (a11 * a22 - a12 * a12),
-            ),
+    pub fn inverse(self) -> Matrix33<T> {
+        let t = &self.0;
+        let det = t[0] * t[3] - t[2] * t[1];
+        if det > T::epsilon() && det < T::epsilon() {
+            return Matrix33::identity();
         }
+        let invdet = T::one() / det;
+        let mut inv = [T::zero(); 6];
+        inv[0] = t[3] * invdet;
+        inv[2] = -t[2] * invdet;
+        inv[4] = (t[2] * t[5] - t[3] * t[4]) * invdet;
+        inv[1] = -t[1] * invdet;
+        inv[3] = t[0] * invdet;
+        inv[5] = (t[1] * t[4] - t[0] * t[5]) * invdet;
+        Matrix33(inv)
+    }
+}
+
+impl<T: Real> Multiply<Vector2<T>> for Matrix33<T> {
+    type Output = Vector2<T>;
+
+    fn multiply(self, pt: Vector2<T>) -> Self::Output {
+        let t = &self.0;
+        Vector2::new(
+            pt.x * t[0] + pt.y * t[2] + t[4],
+            pt.x * t[1] + pt.y * t[3] + t[5],
+        )
+    }
+}
+
+impl<T: Real> Mul for Matrix33<T> {
+    type Output = Matrix33<T>;
+
+    fn mul(mut self, rhs: Self) -> Self::Output {
+        let t = &mut self.0;
+        let s = &rhs.0;
+        let t0 = t[0] * s[0] + t[1] * s[2];
+        let t2 = t[2] * s[0] + t[3] * s[2];
+        let t4 = t[4] * s[0] + t[5] * s[2] + s[4];
+        t[1] = t[0] * s[1] + t[1] * s[3];
+        t[3] = t[2] * s[1] + t[3] * s[3];
+        t[5] = t[4] * s[1] + t[5] * s[3] + s[5];
+        t[0] = t0;
+        t[2] = t2;
+        t[4] = t4;
+        self
+    }
+}
+
+impl<T: Real> MulAssign for Matrix33<T> {
+    fn mul_assign(&mut self, rhs: Self) {
+        *self = *self * rhs;
     }
 }
