@@ -309,7 +309,7 @@ impl<T: Real, D> DynamicTree<T, D> {
 
         let mut b = AABB {
             lower_bound: aabb.lower_bound - settings::aabb_extension::<T>(),
-            upper_bound: aabb.lower_bound + settings::aabb_extension::<T>(),
+            upper_bound: aabb.upper_bound + settings::aabb_extension::<T>(),
         };
         let d = displacement * settings::aabb_multiplier::<T>();
 
@@ -465,11 +465,10 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test() {
+    fn test_create_and_move() {
         let mut tree = DynamicTree::<f32, ()>::new();
         for i in 0..100 {
             for j in 0..100 {
-                println!("create {}, {}", i, j);
                 tree.create_proxy(
                     AABB::new(
                         (i as f32, j as f32).into(),
@@ -491,5 +490,18 @@ mod tests {
                 Vector2::zero(),
             );
         }
+    }
+
+    #[test]
+    fn test_query() {
+        let mut tree = DynamicTree::<f32, ()>::new();
+        tree.create_proxy(AABB::new_center((4.0, 3.0).into(), (1.0, 1.0).into()), ());
+        tree.create_proxy(AABB::new_center((6.0, 3.0).into(), (1.0, 1.0).into()), ());
+        tree.create_proxy(AABB::new_center((8.0, 3.0).into(), (1.0, 1.0).into()), ());
+
+        let res = tree
+            .query(AABB::new_center((5.0, 3.0).into(), (0.5, 0.5).into()))
+            .collect::<Vec<_>>();
+        assert!(!res.is_empty());
     }
 }

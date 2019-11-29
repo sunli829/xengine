@@ -122,6 +122,7 @@ impl<T: Real, I: TestImpl<T>> Test<T, I> {
             .set_continuous_physics(settings.enable_continuous);
         self.world.set_sub_stepping(settings.enable_sub_stepping);
 
+        self.camera.borrow_mut().update_transform();
         self.world.step(
             time_step,
             settings.velocity_iterations,

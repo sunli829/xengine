@@ -1,7 +1,7 @@
 use crate::camera::Camera;
 use std::cell::RefCell;
 use std::rc::Rc;
-use xmath::{Multiply, Transform, Vector2};
+use xmath::{DotTrait, Multiply, Transform, Vector2};
 
 fn to_nvg_color(color: xphysics::Color) -> nvg::Color {
     nvg::Color {
@@ -19,8 +19,7 @@ pub struct NvgDebugDraw {
 
 impl NvgDebugDraw {
     fn transform_pt(&self, pt: Vector2<f32>) -> nvg::Point {
-        let mat = self.camera.borrow().matrix();
-        let pt2 = mat.multiply(pt);
+        let pt2 = self.camera.borrow().transform.multiply(pt);
         (pt2.x, pt2.y).into()
     }
 }
@@ -54,7 +53,11 @@ impl xphysics::DebugDraw for NvgDebugDraw {
     fn draw_circle(&mut self, center: &Vector2<f32>, radius: f32, color: xphysics::Color) {
         let mut ctx = self.ctx.borrow_mut();
         ctx.begin_path();
-        ctx.circle(self.transform_pt((center.x, center.y).into()), radius);
+        ctx.ellipse(
+            self.transform_pt((center.x, center.y).into()),
+            radius * self.camera.borrow().transform.0[0],
+            radius * self.camera.borrow().transform.0[3],
+        );
         ctx.stroke_paint(to_nvg_color(color));
         ctx.stroke_width(1.0);
         ctx.stroke().unwrap();
@@ -69,14 +72,18 @@ impl xphysics::DebugDraw for NvgDebugDraw {
     ) {
         let mut ctx = self.ctx.borrow_mut();
         ctx.begin_path();
-        ctx.circle(self.transform_pt((center.x, center.y).into()), radius);
+        ctx.ellipse(
+            self.transform_pt((center.x, center.y).into()),
+            radius * self.camera.borrow().transform.0[0],
+            radius * self.camera.borrow().transform.0[3],
+        );
         ctx.fill_paint(to_nvg_color(color));
         ctx.fill().unwrap();
 
-        let p = *center + *axis * radius;
+        let p = *center + *axis * Vector2::new(radius, radius);
         ctx.begin_path();
         ctx.move_to(self.transform_pt((center.x, center.y).into()));
-        ctx.line_to((p.x, p.y));
+        ctx.line_to(self.transform_pt((p.x, p.y).into()));
         ctx.stroke_paint(to_nvg_color(color));
         ctx.stroke_width(1.0);
         ctx.stroke().unwrap();
@@ -101,7 +108,10 @@ impl xphysics::DebugDraw for NvgDebugDraw {
         ctx.begin_path();
         ctx.rect(nvg::Rect::new(
             self.transform_pt((p.x - size / 2.0, p.y - size / 2.0).into()),
-            nvg::Extent::new(size, size),
+            nvg::Extent::new(
+                size * self.camera.borrow().transform.0[0],
+                size * self.camera.borrow().transform.0[3],
+            ),
         ));
         ctx.fill_paint(to_nvg_color(color));
         ctx.fill().unwrap();

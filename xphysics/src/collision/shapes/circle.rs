@@ -19,6 +19,13 @@ impl<T: Real> ShapeCircle<T> {
             radius: radius.into(),
         }
     }
+
+    pub fn new_with_radius(radius: T) -> ShapeCircle<T> {
+        ShapeCircle {
+            position: Vector2::zero(),
+            radius: radius.into(),
+        }
+    }
 }
 
 impl<T: Real> Shape<T> for ShapeCircle<T> {

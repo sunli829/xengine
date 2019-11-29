@@ -2,11 +2,11 @@ use crate::{Multiply, Real, Vector2};
 use std::ops::{Mul, MulAssign};
 
 #[derive(Debug, Copy, Clone, Default)]
-pub struct Matrix33<T>(pub [T; 6]);
+pub struct AffineTransform<T>(pub [T; 6]);
 
-impl<T: Real> Matrix33<T> {
-    pub fn identity() -> Matrix33<T> {
-        Matrix33([
+impl<T: Real> AffineTransform<T> {
+    pub fn identity() -> AffineTransform<T> {
+        AffineTransform([
             T::f32(1.0),
             T::f32(0.0),
             T::f32(0.0),
@@ -16,22 +16,22 @@ impl<T: Real> Matrix33<T> {
         ])
     }
 
-    pub fn translate(tx: T, ty: T) -> Matrix33<T> {
-        Matrix33([T::f32(1.0), T::f32(0.0), T::f32(0.0), T::f32(1.0), tx, ty])
+    pub fn translate(tx: T, ty: T) -> AffineTransform<T> {
+        AffineTransform([T::f32(1.0), T::f32(0.0), T::f32(0.0), T::f32(1.0), tx, ty])
     }
 
-    pub fn scale(sx: T, sy: T) -> Matrix33<T> {
-        Matrix33([sx, T::f32(0.0), T::f32(0.0), sy, T::f32(0.0), T::f32(0.0)])
+    pub fn scale(sx: T, sy: T) -> AffineTransform<T> {
+        AffineTransform([sx, T::f32(0.0), T::f32(0.0), sy, T::f32(0.0), T::f32(0.0)])
     }
 
-    pub fn rotate(a: T) -> Matrix33<T> {
+    pub fn rotate(a: T) -> AffineTransform<T> {
         let cs = a.cos();
         let sn = a.sin();
-        Matrix33([cs, sn, -sn, cs, T::f32(0.0), T::f32(0.0)])
+        AffineTransform([cs, sn, -sn, cs, T::f32(0.0), T::f32(0.0)])
     }
 
-    pub fn skew_x(a: T) -> Matrix33<T> {
-        Matrix33([
+    pub fn skew_x(a: T) -> AffineTransform<T> {
+        AffineTransform([
             T::f32(1.0),
             T::f32(0.0),
             a.tan(),
@@ -41,8 +41,8 @@ impl<T: Real> Matrix33<T> {
         ])
     }
 
-    pub fn skew_y(a: T) -> Matrix33<T> {
-        Matrix33([
+    pub fn skew_y(a: T) -> AffineTransform<T> {
+        AffineTransform([
             T::f32(1.0),
             a.tan(),
             T::f32(0.0),
@@ -52,11 +52,11 @@ impl<T: Real> Matrix33<T> {
         ])
     }
 
-    pub fn inverse(self) -> Matrix33<T> {
+    pub fn inverse(self) -> AffineTransform<T> {
         let t = &self.0;
         let det = t[0] * t[3] - t[2] * t[1];
         if det > T::epsilon() && det < T::epsilon() {
-            return Matrix33::identity();
+            return AffineTransform::identity();
         }
         let invdet = T::one() / det;
         let mut inv = [T::zero(); 6];
@@ -66,11 +66,11 @@ impl<T: Real> Matrix33<T> {
         inv[1] = -t[1] * invdet;
         inv[3] = t[0] * invdet;
         inv[5] = (t[1] * t[4] - t[0] * t[5]) * invdet;
-        Matrix33(inv)
+        AffineTransform(inv)
     }
 }
 
-impl<T: Real> Multiply<Vector2<T>> for Matrix33<T> {
+impl<T: Real> Multiply<Vector2<T>> for AffineTransform<T> {
     type Output = Vector2<T>;
 
     fn multiply(self, pt: Vector2<T>) -> Self::Output {
@@ -82,8 +82,8 @@ impl<T: Real> Multiply<Vector2<T>> for Matrix33<T> {
     }
 }
 
-impl<T: Real> Mul for Matrix33<T> {
-    type Output = Matrix33<T>;
+impl<T: Real> Mul for AffineTransform<T> {
+    type Output = AffineTransform<T>;
 
     fn mul(mut self, rhs: Self) -> Self::Output {
         let t = &mut self.0;
@@ -101,7 +101,7 @@ impl<T: Real> Mul for Matrix33<T> {
     }
 }
 
-impl<T: Real> MulAssign for Matrix33<T> {
+impl<T: Real> MulAssign for AffineTransform<T> {
     fn mul_assign(&mut self, rhs: Self) {
         *self = *self * rhs;
     }

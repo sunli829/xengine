@@ -1,6 +1,6 @@
 mod aabb;
+mod affine_transform;
 mod float32;
-mod matrix33;
 mod real;
 mod rotation;
 mod transform;
@@ -8,7 +8,7 @@ mod vector2;
 mod vector3;
 
 pub use aabb::*;
-pub use matrix33::*;
+pub use affine_transform::*;
 pub use real::*;
 pub use rotation::*;
 pub use transform::*;

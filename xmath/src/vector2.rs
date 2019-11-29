@@ -174,6 +174,17 @@ impl<T: Real> Mul<T> for Vector2<T> {
     }
 }
 
+impl<T: Real> Mul for Vector2<T> {
+    type Output = Vector2<T>;
+
+    fn mul(self, rhs: Vector2<T>) -> Self::Output {
+        Vector2 {
+            x: self.x * rhs.x,
+            y: self.y * rhs.y,
+        }
+    }
+}
+
 impl<T: Real> MulAssign<T> for Vector2<T> {
     fn mul_assign(&mut self, rhs: T) {
         self.x *= rhs;

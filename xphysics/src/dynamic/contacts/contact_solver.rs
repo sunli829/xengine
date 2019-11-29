@@ -2,9 +2,7 @@ use crate::dynamic::contacts::Contact;
 use crate::dynamic::time_step::{Position, TimeStep, Velocity};
 use crate::math::Matrix22;
 use crate::{settings, ManifoldType, WorldManifold};
-use xmath::{
-    CrossTrait, DotTrait, Multiply, Real, Rotation, Transform, TransposeMultiply, Vector2,
-};
+use xmath::{CrossTrait, DotTrait, Multiply, Real, Rotation, Transform, Vector2};
 
 const BLOCK_SOLVE: bool = true;
 
@@ -85,7 +83,7 @@ impl<'a, T: Real, D> ContactSolver<'a, T, D> {
                 let fixture_a = contact.fixture_a();
                 let fixture_b = contact.fixture_b();
                 let shape_a = fixture_a.shape();
-                let shape_b = fixture_a.shape();
+                let shape_b = fixture_b.shape();
                 let radius_a = shape_a.radius();
                 let radius_b = shape_b.radius();
                 let body_a = fixture_a.body_ptr;
@@ -387,8 +385,9 @@ impl<'a, T: Real, D> ContactSolver<'a, T, D> {
 
                     x.x = -cp1.normal_mass * b.x;
                     x.y = T::zero();
-                    //                    vn1 = T::zero();
+                    // vn1 = T::zero();
                     vn2 = vc.k.ex.y * x.x + b.y;
+
                     if x.x >= T::zero() && vn2 >= T::zero() {
                         let d = x - a;
 
@@ -408,7 +407,7 @@ impl<'a, T: Real, D> ContactSolver<'a, T, D> {
                     x.x = T::zero();
                     x.y = -cp2.normal_mass * b.y;
                     vn1 = vc.k.ey.x * x.y + b.x;
-                    //                    vn2 = T::zero();
+                    // vn2 = T::zero();
 
                     if x.y >= T::zero() && vn1 >= T::zero() {
                         let d = x - a;
@@ -674,7 +673,7 @@ impl<T: Real> PositionSolverManifold<T> {
                 }
             }
             ManifoldType::FaceA => {
-                let normal = xf_a.q.transpose_multiply(pc.local_normal);
+                let normal = xf_a.q.multiply(pc.local_normal);
                 let plane_point = xf_a.multiply(pc.local_point);
                 let clip_point = xf_b.multiply(pc.local_points[index]);
                 let separation = (clip_point - plane_point).dot(normal) - pc.radius_a - pc.radius_b;
@@ -686,7 +685,7 @@ impl<T: Real> PositionSolverManifold<T> {
                 }
             }
             ManifoldType::FaceB => {
-                let normal = xf_b.q.transpose_multiply(pc.local_normal);
+                let normal = xf_b.q.multiply(pc.local_normal);
                 let plane_point = xf_b.multiply(pc.local_point);
                 let clip_point = xf_a.multiply(pc.local_points[index]);
                 let separation = (clip_point - plane_point).dot(normal) - pc.radius_a - pc.radius_b;

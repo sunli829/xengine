@@ -327,7 +327,7 @@ pub fn distance<T: Real>(
             let vertex = (&mut simplex.v1 as *mut SimplexVertex<T>).add(simplex.count);
             (*vertex).index_a = proxy_a.get_support(&transform_a.q.transpose_multiply(-d));
             (*vertex).wa = transform_a.multiply(proxy_a.vertices[(*vertex).index_a]);
-            (*vertex).index_b = proxy_b.get_support(&transform_b.q.multiply(d));
+            (*vertex).index_b = proxy_b.get_support(&transform_b.q.transpose_multiply(d));
             (*vertex).wb = transform_b.multiply(proxy_b.vertices[(*vertex).index_b]);
             (*vertex).w = (*vertex).wb - (*vertex).wa;
 

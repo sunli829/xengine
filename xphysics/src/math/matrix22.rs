@@ -8,6 +8,7 @@ pub struct Matrix22<T> {
 }
 
 impl<T: Real> Matrix22<T> {
+    #[allow(dead_code)]
     pub fn new(ex: Vector2<T>, ey: Vector2<T>) -> Matrix22<T> {
         Matrix22 { ex, ey }
     }
@@ -54,6 +55,7 @@ impl<T: Real> Matrix22<T> {
         }
     }
 
+    #[allow(dead_code)]
     pub fn solve(&self, b: Vector2<T>) -> Vector2<T> {
         let a11 = self.ex.x;
         let a12 = self.ey.x;

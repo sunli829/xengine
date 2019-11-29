@@ -8,10 +8,19 @@ pub struct AABB<T> {
 
 impl<T: Real> AABB<T> {
     pub fn new(lower_bound: Vector2<T>, upper_bound: Vector2<T>) -> AABB<T> {
+        assert!(lower_bound.x <= upper_bound.x);
+        assert!(lower_bound.y <= upper_bound.y);
         AABB {
             lower_bound,
             upper_bound,
         }
+    }
+
+    pub fn new_center(position: Vector2<T>, half: Vector2<T>) -> AABB<T> {
+        Self::new(
+            (position.x - half.x, position.y - half.y).into(),
+            (position.x + half.x, position.y + half.y).into(),
+        )
     }
 
     pub fn is_valid(&self) -> bool {
