@@ -68,8 +68,8 @@ impl<T: Real> TransposeMultiply<Transform<T>> for Transform<T> {
         let a = self;
         let b = rhs;
         Transform {
-            p: a.q.multiply(b.p - a.p),
-            q: a.q.multiply(b.q),
+            p: a.q.transpose_multiply(b.p - a.p),
+            q: a.q.transpose_multiply(b.q),
         }
     }
 }

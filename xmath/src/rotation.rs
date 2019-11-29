@@ -40,8 +40,8 @@ impl<T: Real> Multiply<Rotation<T>> for Rotation<T> {
     fn multiply(self, rhs: Rotation<T>) -> Self::Output {
         let q = self;
         let r = rhs;
-        let s = q.c * r.s - q.s * r.c;
-        let c = q.c * r.c + q.s * r.s;
+        let s = q.c * r.s + q.s * r.c;
+        let c = q.c * r.c - q.s * r.s;
         Rotation { s, c }
     }
 }

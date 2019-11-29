@@ -27,7 +27,7 @@ impl<T: Real> Sweep<T> {
     }
 
     pub fn normalize(&self) -> Sweep<T> {
-        let d = T::pi_times_2() * (self.a0 / T::pi_times_2());
+        let d = T::pi_times_2() * (self.a0 / T::pi_times_2()).floor();
         let a0 = self.a0 - d;
         let a = self.a - d;
         Sweep {

@@ -125,7 +125,7 @@ impl<T: Real, D> Contact<T, D> {
             toi: T::zero(),
             friction: unsafe { mix_friction((*fixture_a).friction(), (*fixture_b).friction()) },
             restitution: unsafe {
-                mix_restitution((*fixture_a).friction(), (*fixture_b).friction())
+                mix_restitution((*fixture_a).restitution(), (*fixture_b).restitution())
             },
             tangent_speed: T::zero(),
             evaluate_fn: unsafe {

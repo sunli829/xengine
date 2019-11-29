@@ -308,7 +308,7 @@ pub fn distance<T: Real>(
         }
 
         match simplex.count {
-            1 => break,
+            1 => (),
             2 => simplex.solve2(),
             3 => simplex.solve3(),
             _ => unreachable!(),

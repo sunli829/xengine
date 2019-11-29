@@ -1,6 +1,5 @@
 use xmath::{DotTrait, Multiply, Real, TransposeMultiply, Vector2};
 
-
 #[derive(Debug, Copy, Clone, Default)]
 pub struct Matrix22<T> {
     pub ex: Vector2<T>,
@@ -89,5 +88,27 @@ impl<T: Real> TransposeMultiply<Vector2<T>> for Matrix22<T> {
         let a = self;
         let v = rhs;
         Vector2::new(v.dot(a.ex), v.dot(a.ey))
+    }
+}
+
+impl<T: Real> Multiply<Matrix22<T>> for Matrix22<T> {
+    type Output = Matrix22<T>;
+
+    fn multiply(self, rhs: Matrix22<T>) -> Self::Output {
+        let a = self;
+        let b = rhs;
+        Matrix22::new(a.multiply(b.ex), a.multiply(b.ey))
+    }
+}
+
+impl<T: Real> TransposeMultiply<Matrix22<T>> for Matrix22<T> {
+    type Output = Matrix22<T>;
+
+    fn transpose_multiply(self, rhs: Matrix22<T>) -> Self::Output {
+        let a = self;
+        let b = rhs;
+        let c1 = (a.ex.dot(b.ex), a.ey.dot(b.ex)).into();
+        let c2 = (a.ex.dot(b.ey), a.ey.dot(b.ey)).into();
+        Matrix22::new(c1, c2)
     }
 }

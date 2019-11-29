@@ -574,10 +574,7 @@ impl<T: Real, D> Body<T, D> {
     }
 
     pub(crate) fn should_collide(&self, other: &Body<T, D>) -> bool {
-        if self.type_ != BodyType::Dynamic && other.type_ != BodyType::Dynamic {
-            return false;
-        }
-        true
+        self.type_ == BodyType::Dynamic || other.type_ == BodyType::Dynamic
     }
 
     pub fn data(&self) -> Option<&D> {

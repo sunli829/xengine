@@ -192,6 +192,13 @@ impl<T: Real> MulAssign<T> for Vector2<T> {
     }
 }
 
+impl<T: Real> MulAssign for Vector2<T> {
+    fn mul_assign(&mut self, rhs: Vector2<T>) {
+        self.x *= rhs.x;
+        self.y *= rhs.y;
+    }
+}
+
 impl<T: Real> CrossTrait<Vector2<T>> for Vector2<T> {
     type Output = T;
 
