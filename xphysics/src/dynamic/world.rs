@@ -68,7 +68,7 @@ pub trait DebugDraw {
     );
     fn draw_segment(&mut self, p1: &Vector2<f32>, p2: &Vector2<f32>, color: Color);
     fn draw_transform(&mut self, xf: &Transform<f32>);
-    fn draw_point(&mut self, p: &Vector2<f32>, size: f32, color: Color);
+    fn draw_point(&mut self, p: &Vector2<f32>, color: Color);
 }
 
 pub(crate) struct WorldInner<T, D> {
@@ -582,13 +582,14 @@ impl<T: Real, D> World<T, D> {
 
                         (*c).toi = alpha;
                         (*c).flags.insert(ContactFlags::TOI);
-                        c = (*c).next_ptr;
                     }
 
                     if alpha < min_alpha {
                         min_contact = c;
                         min_alpha = alpha;
                     }
+
+                    c = (*c).next_ptr;
                 }
 
                 if min_contact.is_null() || T::one() - T::ten() * T::epsilon() < min_alpha {
@@ -776,7 +777,7 @@ impl<T: Real, D> World<T, D> {
 
         if self.0.continuous_physics && step.dt > T::zero() {
             let timer = Timer::new();
-//            self.solve_toi(&step);
+            self.solve_toi(&step);
             self.0.profile.solve_toi = timer.get_duration();
         }
 
@@ -962,7 +963,6 @@ impl<T: Real, D> World<T, D> {
                             x: v1.x.to_f32(),
                             y: v1.y.to_f32(),
                         },
-                        4.0,
                         color,
                     );
 
@@ -992,7 +992,6 @@ impl<T: Real, D> World<T, D> {
                                 x: v2.x.to_f32(),
                                 y: v2.y.to_f32(),
                             },
-                            4.0,
                             color,
                         );
                         v1 = v2;

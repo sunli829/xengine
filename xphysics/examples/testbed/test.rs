@@ -29,16 +29,16 @@ pub struct TestSetting<T> {
 impl<T: Real> Default for TestSetting<T> {
     fn default() -> Self {
         Self {
-            hz: T::f32(720.0),
+            hz: T::f32(360.0),
             velocity_iterations: 8,
             position_iterations: 3,
             draw_shapes: true,
-            draw_aabbs: true,
+            draw_aabbs: false,
             draw_contact_points: true,
             draw_contact_normals: true,
             draw_contact_impulse: false,
             draw_friction_impulse: false,
-            draw_center_of_mass: true,
+            draw_center_of_mass: false,
             draw_stats: false,
             enable_warm_starting: true,
             enable_continuous: true,
@@ -50,8 +50,18 @@ impl<T: Real> Default for TestSetting<T> {
     }
 }
 
-pub trait TestImpl<T> {
+pub trait TestImpl<T: Real> {
     fn new(world: &mut World<T, ()>) -> Self;
+
+    fn step(
+        &self,
+        world: &mut World<T, ()>,
+        time_step: T,
+        velocity_iterations: usize,
+        position_iterations: usize,
+    ) {
+        world.step(time_step, velocity_iterations, position_iterations);
+    }
 }
 
 pub struct Test<T, I> {
@@ -122,8 +132,8 @@ impl<T: Real, I: TestImpl<T>> Test<T, I> {
             .set_continuous_physics(settings.enable_continuous);
         self.world.set_sub_stepping(settings.enable_sub_stepping);
 
-        self.camera.borrow_mut().update_transform();
-        self.world.step(
+        self.test_impl.step(
+            &mut self.world,
             time_step,
             settings.velocity_iterations,
             settings.position_iterations,

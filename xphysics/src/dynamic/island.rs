@@ -302,6 +302,9 @@ impl<'a, T: Real, D> Island<'a, T, D> {
 
     pub fn add_body(&mut self, body: *mut Body<T, D>) {
         self.bodies.push(body);
+        unsafe {
+            (*body).island_index = self.bodies.len() - 1;
+        }
     }
 
     pub fn add_contact(&mut self, contact: *mut Contact<T, D>) {

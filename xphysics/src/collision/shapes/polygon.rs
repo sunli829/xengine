@@ -130,9 +130,7 @@ impl<T: Real> ShapePolygon<T> {
         }
 
         n = temp_count;
-        if n < 3 {
-            unreachable!();
-        }
+        assert!(n >= 3);
 
         let mut i0 = 0;
         let mut x0 = ps[0].x;
@@ -174,14 +172,12 @@ impl<T: Real> ShapePolygon<T> {
             m += 1;
             ih = ie;
 
-            if ie == 10 {
+            if ie == i0 {
                 break;
             }
         }
 
-        if m < 3 {
-            unreachable!();
-        }
+        assert!(m >= 3);
 
         let mut shape = ShapePolygon {
             centroid: Default::default(),
