@@ -776,7 +776,7 @@ impl<T: Real, D> World<T, D> {
 
         if self.0.continuous_physics && step.dt > T::zero() {
             let timer = Timer::new();
-            self.solve_toi(&step);
+//            self.solve_toi(&step);
             self.0.profile.solve_toi = timer.get_duration();
         }
 
@@ -875,7 +875,7 @@ impl<T: Real, D> World<T, D> {
                 {
                     let mut b = self.0.body_list;
                     while !b.is_null() {
-                        if (*b).is_debug_draw() {
+                        if !(*b).is_debug_draw() {
                             b = (*b).next_ptr;
                             continue;
                         }

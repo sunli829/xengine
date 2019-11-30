@@ -122,6 +122,27 @@ impl<'a, T: Real, D> ContactSolver<'a, T, D> {
                 pc.radius_a = radius_a;
                 pc.radius_b = radius_b;
                 pc.type_ = manifold.type_;
+
+                for j in 0..point_count {
+                    let cp = &manifold.points[j];
+                    let vcp = &mut vc.points[j];
+
+                    if def.step.warm_starting {
+                        vcp.normal_impulse = def.step.dt_ratio * cp.normal_impulse;
+                        vcp.tangent_impulse = def.step.dt_ratio * cp.tangent_impulse;
+                    } else {
+                        vcp.normal_impulse = T::zero();
+                        vcp.tangent_impulse = T::zero();
+                    }
+
+                    vcp.ra = Vector2::zero();
+                    vcp.rb = Vector2::zero();
+                    vcp.normal_mass = T::zero();
+                    vcp.tangent_mass = T::zero();
+                    vcp.velocity_bias = T::zero();
+
+                    pc.local_points[j] = cp.local_point;
+                }
             }
 
             ContactSolver {

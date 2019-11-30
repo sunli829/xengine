@@ -59,8 +59,8 @@ impl<'a, T: Real, D> Island<'a, T, D> {
 
                 let c = (*b).sweep.c;
                 let a = (*b).sweep.a;
-                let mut v = *(*b).linear_velocity();
-                let mut w = (*b).angular_velocity();
+                let mut v = (*b).linear_velocity_;
+                let mut w = (*b).angular_velocity_;
 
                 (*b).sweep.c0 = (*b).sweep.c;
                 (*b).sweep.a0 = (*b).sweep.a;

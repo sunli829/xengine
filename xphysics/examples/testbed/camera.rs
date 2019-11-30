@@ -21,7 +21,7 @@ impl Default for Camera {
 
 impl Camera {
     pub fn update_transform(&mut self) {
-        let extent_width = 50.0;
+        let extent_width = 60.0;
         let extent_height = 50.0;
         self.transform = AffineTransform::scale(1.0, -1.0)
             * AffineTransform::translate(0.0, 18.0)

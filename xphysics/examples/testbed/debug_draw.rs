@@ -2,6 +2,7 @@ use crate::camera::Camera;
 use std::cell::RefCell;
 use std::rc::Rc;
 use xmath::{DotTrait, Multiply, Transform, Vector2};
+use xphysics::Color;
 
 fn to_nvg_color(color: xphysics::Color) -> nvg::Color {
     nvg::Color {
@@ -56,7 +57,7 @@ impl xphysics::DebugDraw for NvgDebugDraw {
         ctx.ellipse(
             self.transform_pt((center.x, center.y).into()),
             radius * self.camera.borrow().transform.0[0],
-            radius * self.camera.borrow().transform.0[3],
+            radius * self.camera.borrow().transform.0[3].abs(),
         );
         ctx.stroke_paint(to_nvg_color(color));
         ctx.stroke_width(1.0);
@@ -75,7 +76,7 @@ impl xphysics::DebugDraw for NvgDebugDraw {
         ctx.ellipse(
             self.transform_pt((center.x, center.y).into()),
             radius * self.camera.borrow().transform.0[0],
-            radius * self.camera.borrow().transform.0[3],
+            radius * self.camera.borrow().transform.0[3].abs(),
         );
         ctx.fill_paint(to_nvg_color(color));
         ctx.fill().unwrap();
@@ -99,8 +100,29 @@ impl xphysics::DebugDraw for NvgDebugDraw {
         ctx.stroke().unwrap();
     }
 
-    fn draw_transform(&mut self, _xf: &Transform<f32>) {
-        unimplemented!()
+    fn draw_transform(&mut self, xf: &Transform<f32>) {
+        let axis_scale = 0.1;
+        let red = nvg::Color::rgb(1.0, 0.0, 0.0);
+        let green = nvg::Color::rgb(0.0, 1.0, 0.0);
+        let p1 = xf.p;
+
+        let mut ctx = self.ctx.borrow_mut();
+        ctx.stroke_width(1.0);
+
+        ctx.begin_path();
+        ctx.move_to(self.transform_pt(p1));
+        let p2 = p1 + xf.q.x_axis() * axis_scale * self.camera.borrow().transform.0[0];
+        ctx.line_to(self.transform_pt(p2));
+        ctx.stroke_paint(red);
+        ctx.stroke();
+
+        ctx.begin_path();
+        ctx.move_to(self.transform_pt(p1));
+        let ya = xf.q.y_axis();
+        let p2 = p1 + xf.q.y_axis() * axis_scale * self.camera.borrow().transform.0[3].abs();
+        ctx.line_to(self.transform_pt(p2));
+        ctx.stroke_paint(green);
+        ctx.stroke();
     }
 
     fn draw_point(&mut self, p: &Vector2<f32>, size: f32, color: xphysics::Color) {
@@ -110,7 +132,7 @@ impl xphysics::DebugDraw for NvgDebugDraw {
             self.transform_pt((p.x - size / 2.0, p.y - size / 2.0).into()),
             nvg::Extent::new(
                 size * self.camera.borrow().transform.0[0],
-                size * self.camera.borrow().transform.0[3],
+                size * self.camera.borrow().transform.0[3].abs(),
             ),
         ));
         ctx.fill_paint(to_nvg_color(color));
