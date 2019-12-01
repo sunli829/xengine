@@ -777,7 +777,7 @@ impl<T: Real, D> World<T, D> {
 
         if self.0.continuous_physics && step.dt > T::zero() {
             let timer = Timer::new();
-            self.solve_toi(&step);
+//            self.solve_toi(&step);
             self.0.profile.solve_toi = timer.get_duration();
         }
 

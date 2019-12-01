@@ -394,10 +394,10 @@ impl<'a, T: Real, D> ContactSolver<'a, T, D> {
                         let p1 = normal * d.x;
                         let p2 = normal * d.y;
                         va -= (p1 + p2) * ma;
-                        wa -= ia * cp1.ra.cross(p1) + cp2.ra.cross(p2);
+                        wa -= ia * (cp1.ra.cross(p1) + cp2.ra.cross(p2));
 
                         vb += (p1 + p2) * mb;
-                        wb += ib * cp1.rb.cross(p1) + cp2.rb.cross(p2);
+                        wb += ib * (cp1.rb.cross(p1) + cp2.rb.cross(p2));
 
                         cp1.normal_impulse = x.x;
                         cp2.normal_impulse = x.y;

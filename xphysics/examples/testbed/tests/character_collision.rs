@@ -135,7 +135,7 @@ impl<T: Real> TestImpl<T> for CharacterCollision {
         );
 
         // Square character 1
-        world.create_body_with_fixture(
+        let id = world.create_body_with_fixture(
             BodyDef {
                 position: (T::f32(-3.0), T::f32(8.0)).into(),
                 type_: BodyType::Dynamic,
@@ -169,7 +169,7 @@ impl<T: Real> TestImpl<T> for CharacterCollision {
             BodyDef {
                 position: (T::f32(-5.0), T::f32(8.0)).into(),
                 type_: BodyType::Dynamic,
-                fixed_rotation: true,
+                fixed_rotation: false,
                 allow_sleep: false,
                 ..BodyDef::default()
             },

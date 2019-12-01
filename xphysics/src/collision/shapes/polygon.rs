@@ -59,7 +59,7 @@ impl<T: Real> ShapePolygon<T> {
 
         for i in 0..4 {
             polygon.vertices[i] = xf.multiply(polygon.vertices[i]);
-            polygon.normals[i] = xf.multiply(polygon.normals[i]);
+            polygon.normals[i] = xf.q.multiply(polygon.normals[i]);
         }
 
         polygon
