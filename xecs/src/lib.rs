@@ -21,7 +21,7 @@ pub enum Event {
 
 struct ECSInner {
     entities: Slab<Entity>,
-    component_mask: HashMap<TypeId, (u32, u8)>,
+    components_idx: HashMap<TypeId, u8>,
     systems: HashMap<TypeId, (usize, Rc<RefCell<dyn Any>>)>,
     events: Vec<Event>,
 }
@@ -32,8 +32,21 @@ pub struct EntityBuilder<'a> {
 }
 
 impl<'a> EntityBuilder<'a> {
-    pub fn component<C: 'static>(&mut self, c: C) {
-        self.entity.components[self.ecs_inner.component_mask]
+    pub fn component<C: 'static>(mut self, c: C) -> Self {
+        let tid = TypeId::of::<C>();
+        let idx = self
+            .ecs_inner
+            .components_idx
+            .get(&tid)
+            .map(|idx| *idx)
+            .unwrap_or_else(|| {
+                let count = self.ecs_inner.components_idx.len();
+                let idx = count as u8;
+                self.ecs_inner.components_idx.insert(tid, idx);
+                idx
+            });
+        self.entity.components[idx as usize] = Some(Box::new(c));
+        self
     }
 }
 
@@ -46,7 +59,7 @@ impl ECS {
         ECS {
             inner: ECSInner {
                 entities: Default::default(),
-                component_mask: Default::default(),
+                components_idx: Default::default(),
                 systems: Default::default(),
                 events: Default::default(),
             },
