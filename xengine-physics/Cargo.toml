@@ -6,4 +6,5 @@ edition = "2018"
 
 [dependencies]
 xecs = { path = "../xecs" }
+xmath = { path = "../xmath" }
 xphysics = { path = "../xphysics" }

@@ -3,4 +3,5 @@ use xmath::Transform;
 
 pub struct ComponentTransform(pub Transform<f32>);
 
-pub struct ComponentChildren(pub EntityId);
+pub struct ComponentChildren(pub Vec<EntityId>);
+
