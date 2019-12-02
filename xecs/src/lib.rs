@@ -9,12 +9,16 @@ pub struct EntityId(usize);
 #[derive(Default)]
 struct ComponentRegistry(HashMap<TypeId, u8>);
 
+pub trait Component: 'static {
+    fn name() -> &'static str;
+}
+
 impl ComponentRegistry {
-    fn get_idx<C: 'static>(&self) -> Option<u8> {
+    fn get_idx<C: Component>(&self) -> Option<u8> {
         self.0.get(&TypeId::of::<C>()).map(ToOwned::to_owned)
     }
 
-    fn get_or_create_idx<C: 'static>(&mut self) -> u8 {
+    fn get_or_create_idx<C: Component>(&mut self) -> u8 {
         let tid = TypeId::of::<C>();
         self.0.get(&tid).map(|idx| *idx).unwrap_or_else(move || {
             let count = self.0.len();
@@ -35,7 +39,7 @@ pub struct EntityRef<'a> {
 }
 
 impl<'a> EntityRef<'a> {
-    pub fn contains<C: 'static>(&self) -> bool {
+    pub fn contains<C: Component>(&self) -> bool {
         let entity = &self.entity;
         match self
             .components_registry
@@ -47,7 +51,7 @@ impl<'a> EntityRef<'a> {
         }
     }
 
-    pub fn get<C: 'static>(&self) -> Option<&C> {
+    pub fn get<C: Component>(&self) -> Option<&C> {
         let entity = &self.entity;
         match self
             .components_registry
@@ -60,15 +64,15 @@ impl<'a> EntityRef<'a> {
     }
 }
 
-pub struct EntityMut<'a> {
+pub struct EntityMut<'a, E> {
     id: EntityId,
     components_registry: &'a mut ComponentRegistry,
-    events: &'a mut Vec<Event>,
+    events: &'a mut Vec<Event<E>>,
     entity: &'a mut Entity,
 }
 
-impl<'a> EntityMut<'a> {
-    pub fn contains<C: 'static>(&self) -> bool {
+impl<'a, E> EntityMut<'a, E> {
+    pub fn contains<C: Component>(&self) -> bool {
         let entity = &self.entity;
         match self
             .components_registry
@@ -80,21 +84,21 @@ impl<'a> EntityMut<'a> {
         }
     }
 
-    pub fn add<C: 'static>(&mut self, c: C) {
+    pub fn add<C: Component>(&mut self, c: C) {
         let tid = TypeId::of::<C>();
         let idx = self.components_registry.get_or_create_idx::<C>();
         self.entity.components[idx as usize] = Some(Box::new(c));
         self.events.push(Event::CreateComponent(self.id, tid));
     }
 
-    pub fn remove<C: 'static>(&mut self) {
+    pub fn remove<C: Component>(&mut self) {
         let tid = TypeId::of::<C>();
         let idx = self.components_registry.get_or_create_idx::<C>();
         self.entity.components[idx as usize] = None;
         self.events.push(Event::RemoveComponent(self.id, tid));
     }
 
-    pub fn get<C: 'static>(&self) -> Option<&C> {
+    pub fn get<C: Component>(&self) -> Option<&C> {
         let entity = &self.entity;
         match self
             .components_registry
@@ -106,7 +110,7 @@ impl<'a> EntityMut<'a> {
         }
     }
 
-    pub fn get_mut<C: 'static>(&mut self) -> Option<&mut C> {
+    pub fn get_mut<C: Component>(&mut self) -> Option<&mut C> {
         let entity = &mut self.entity;
         match self
             .components_registry
@@ -119,32 +123,33 @@ impl<'a> EntityMut<'a> {
     }
 }
 
-pub trait System {
-    fn update(&mut self, ecs: &mut ECS, delta: Duration) {}
-    fn handle_event(&mut self, ecs: &mut ECS, event: &Event) {}
+pub trait System<E> {
+    fn update(&mut self, ecs: &mut ECS<E>, delta: Duration) {}
+    fn handle_event(&mut self, ecs: &mut ECS<E>, event: &Event<E>) {}
 }
 
-pub enum Event {
+pub enum Event<E> {
     CreateEntity(EntityId),
     RemoveEntity(EntityId),
     CreateComponent(EntityId, TypeId),
     RemoveComponent(EntityId, TypeId),
+    Custom(E),
 }
 
-struct ECSInner {
+struct ECSInner<E> {
     entities: Slab<Entity>,
     components_registry: ComponentRegistry,
-    systems: HashMap<TypeId, (usize, Box<dyn System>)>,
-    events: Vec<Event>,
+    systems: HashMap<TypeId, (usize, Box<dyn System<E>>)>,
+    events: Vec<Event<E>>,
 }
 
-pub struct EntityBuilder<'a> {
-    ecs_inner: &'a mut ECSInner,
+pub struct EntityBuilder<'a, E> {
+    ecs_inner: &'a mut ECSInner<E>,
     entity: Entity,
 }
 
-impl<'a> EntityBuilder<'a> {
-    pub fn component<C: 'static>(mut self, c: C) -> Self {
+impl<'a, E> EntityBuilder<'a, E> {
+    pub fn component<C: Component>(mut self, c: C) -> Self {
         let idx = self.ecs_inner.components_registry.get_or_create_idx::<C>();
         self.entity.components[idx as usize] = Some(Box::new(c));
         self
@@ -157,12 +162,12 @@ impl<'a> EntityBuilder<'a> {
     }
 }
 
-pub struct ECS {
-    inner: ECSInner,
+pub struct ECS<E> {
+    inner: ECSInner<E>,
 }
 
-impl ECS {
-    pub fn new() -> ECS {
+impl<E> ECS<E> {
+    pub fn new() -> ECS<E> {
         ECS {
             inner: ECSInner {
                 entities: Default::default(),
@@ -173,7 +178,7 @@ impl ECS {
         }
     }
 
-    pub fn create_entity(&mut self) -> EntityBuilder<'_> {
+    pub fn create_entity(&mut self) -> EntityBuilder<'_, E> {
         EntityBuilder {
             ecs_inner: &mut self.inner,
             entity: Entity {
@@ -195,7 +200,7 @@ impl ECS {
         })
     }
 
-    pub fn entity_mut(&mut self, id: EntityId) -> Option<EntityMut<'_>> {
+    pub fn entity_mut(&mut self, id: EntityId) -> Option<EntityMut<'_, E>> {
         let events = &mut self.inner.events;
         let components_registry = &mut self.inner.components_registry;
         self.inner
@@ -218,7 +223,7 @@ impl ECS {
             self.inner
                 .systems
                 .get(&TypeId::of::<T>())
-                .map(|item| (&*(item.1.as_ref() as *const dyn System as *const T)))
+                .map(|item| (&*(item.1.as_ref() as *const dyn System<E> as *const T)))
         }
     }
 
@@ -227,7 +232,7 @@ impl ECS {
             self.inner
                 .systems
                 .get_mut(&TypeId::of::<T>())
-                .map(|item| (&mut *(item.1.as_mut() as *mut dyn System as *mut T)))
+                .map(|item| (&mut *(item.1.as_mut() as *mut dyn System<E> as *mut T)))
         }
     }
 
@@ -235,7 +240,7 @@ impl ECS {
         unsafe {
             let mut systems = Vec::with_capacity(self.inner.systems.len());
             for (_, (ord, system)) in &mut self.inner.systems {
-                systems.push((*ord, system.as_mut() as *mut dyn System));
+                systems.push((*ord, system.as_mut() as *mut dyn System<E>));
             }
             systems.sort_by(|a, b| a.0.cmp(&b.0));
 
