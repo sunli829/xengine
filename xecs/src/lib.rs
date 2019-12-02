@@ -209,6 +209,10 @@ impl ECS {
             })
     }
 
+    pub fn entities_count(&self) -> usize {
+        self.inner.entities.len()
+    }
+
     pub fn system<T: 'static>(&self) -> Option<&T> {
         unsafe {
             self.inner
