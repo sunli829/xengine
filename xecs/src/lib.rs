@@ -64,14 +64,14 @@ impl<'a> EntityRef<'a> {
     }
 }
 
-pub struct EntityMut<'a, E> {
+pub struct EntityMut<'a> {
     id: EntityId,
     components_registry: &'a mut ComponentRegistry,
-    events: &'a mut Vec<Event<E>>,
+    events: &'a mut Vec<Event>,
     entity: &'a mut Entity,
 }
 
-impl<'a, E> EntityMut<'a, E> {
+impl<'a> EntityMut<'a> {
     pub fn contains<C: Component>(&self) -> bool {
         let entity = &self.entity;
         match self
@@ -123,32 +123,32 @@ impl<'a, E> EntityMut<'a, E> {
     }
 }
 
-pub trait System<E> {
-    fn update(&mut self, ecs: &mut ECS<E>, delta: Duration) {}
-    fn handle_event(&mut self, ecs: &mut ECS<E>, event: &Event<E>) {}
+pub trait System {
+    fn update(&mut self, ecs: &mut ECS, delta: Duration) {}
+    fn handle_event(&mut self, ecs: &mut ECS, event: &Event) {}
 }
 
-pub enum Event<E> {
+pub enum Event {
     CreateEntity(EntityId),
     RemoveEntity(EntityId),
     CreateComponent(EntityId, TypeId),
     RemoveComponent(EntityId, TypeId),
-    Custom(E),
+    Custom(Box<dyn Any>),
 }
 
-struct ECSInner<E> {
+struct ECSInner {
     entities: Slab<Entity>,
     components_registry: ComponentRegistry,
-    systems: HashMap<TypeId, (usize, Box<dyn System<E>>)>,
-    events: Vec<Event<E>>,
+    systems: HashMap<TypeId, (usize, Box<dyn System>)>,
+    events: Vec<Event>,
 }
 
-pub struct EntityBuilder<'a, E> {
-    ecs_inner: &'a mut ECSInner<E>,
+pub struct EntityBuilder<'a> {
+    ecs_inner: &'a mut ECSInner,
     entity: Entity,
 }
 
-impl<'a, E> EntityBuilder<'a, E> {
+impl<'a> EntityBuilder<'a> {
     pub fn component<C: Component>(mut self, c: C) -> Self {
         let idx = self.ecs_inner.components_registry.get_or_create_idx::<C>();
         self.entity.components[idx as usize] = Some(Box::new(c));
@@ -162,12 +162,12 @@ impl<'a, E> EntityBuilder<'a, E> {
     }
 }
 
-pub struct ECS<E> {
-    inner: ECSInner<E>,
+pub struct ECS {
+    inner: ECSInner,
 }
 
-impl<E> ECS<E> {
-    pub fn new() -> ECS<E> {
+impl ECS {
+    pub fn new() -> ECS {
         ECS {
             inner: ECSInner {
                 entities: Default::default(),
@@ -178,7 +178,7 @@ impl<E> ECS<E> {
         }
     }
 
-    pub fn create_entity(&mut self) -> EntityBuilder<'_, E> {
+    pub fn create_entity(&mut self) -> EntityBuilder<'_> {
         EntityBuilder {
             ecs_inner: &mut self.inner,
             entity: Entity {
@@ -200,7 +200,7 @@ impl<E> ECS<E> {
         })
     }
 
-    pub fn entity_mut(&mut self, id: EntityId) -> Option<EntityMut<'_, E>> {
+    pub fn entity_mut(&mut self, id: EntityId) -> Option<EntityMut<'_>> {
         let events = &mut self.inner.events;
         let components_registry = &mut self.inner.components_registry;
         self.inner
@@ -223,7 +223,7 @@ impl<E> ECS<E> {
             self.inner
                 .systems
                 .get(&TypeId::of::<T>())
-                .map(|item| (&*(item.1.as_ref() as *const dyn System<E> as *const T)))
+                .map(|item| (&*(item.1.as_ref() as *const dyn System as *const T)))
         }
     }
 
@@ -232,7 +232,7 @@ impl<E> ECS<E> {
             self.inner
                 .systems
                 .get_mut(&TypeId::of::<T>())
-                .map(|item| (&mut *(item.1.as_mut() as *mut dyn System<E> as *mut T)))
+                .map(|item| (&mut *(item.1.as_mut() as *mut dyn System as *mut T)))
         }
     }
 
@@ -240,7 +240,7 @@ impl<E> ECS<E> {
         unsafe {
             let mut systems = Vec::with_capacity(self.inner.systems.len());
             for (_, (ord, system)) in &mut self.inner.systems {
-                systems.push((*ord, system.as_mut() as *mut dyn System<E>));
+                systems.push((*ord, system.as_mut() as *mut dyn System));
             }
             systems.sort_by(|a, b| a.0.cmp(&b.0));
 

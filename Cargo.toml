@@ -3,5 +3,8 @@ members = [
     "xecs",
     "xmath",
     "xfixedpoint",
-    "xphysics"
+    "xphysics",
+    "xengine-basecomponents",
+    "xengine-gizmo",
+    "xengine-physics"
 ]

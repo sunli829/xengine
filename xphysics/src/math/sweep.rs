@@ -16,7 +16,7 @@ impl<T: Real> Sweep<T> {
         let angle = (T::one() - beta) * self.a0 + beta * self.a;
         let q = Rotation::new(angle);
         p -= q.multiply(self.local_center);
-        Transform { p, q }
+        Transform { p: p, q }
     }
 
     pub fn advance(&mut self, alpha: T) {
