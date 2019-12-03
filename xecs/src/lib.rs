@@ -133,8 +133,8 @@ impl<'a> EntityMut<'a> {
 }
 
 pub trait System {
-    fn update(&mut self, ecs: &mut ECS, delta: Duration) {}
-    fn handle_event(&mut self, ecs: &mut ECS, event: &Event) {}
+    fn update(&mut self, _ecs: &mut ECS, _delta: Duration) {}
+    fn handle_event(&mut self, _ecs: &mut ECS, _event: &Event) {}
 }
 
 pub enum Event {
