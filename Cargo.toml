@@ -5,6 +5,5 @@ members = [
     "xfixedpoint",
     "xphysics",
     "xengine-basecomponents",
-    "xengine-gizmo",
     "xengine-physics"
 ]

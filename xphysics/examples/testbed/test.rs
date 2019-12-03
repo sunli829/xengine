@@ -1,6 +1,5 @@
 use crate::camera::Camera;
 use crate::debug_draw::NvgDebugDraw;
-use glutin::CreationError::Window;
 use std::cell::RefCell;
 use std::rc::Rc;
 use xmath::{Real, Vector2};

@@ -8,3 +8,4 @@ edition = "2018"
 xecs = { path = "../xecs" }
 xmath = { path = "../xmath" }
 xphysics = { path = "../xphysics" }
+xengine-basecomponents = { path = "../xengine-basecomponents" }

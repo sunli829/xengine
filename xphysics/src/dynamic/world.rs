@@ -207,10 +207,10 @@ impl<T: Real, D> World<T, D> {
         }
     }
 
-    pub fn create_body_with_fixture<S: Shape<T> + 'static>(
+    pub fn create_body_with_fixture(
         &mut self,
         def: BodyDef<T, D>,
-        fixture_def: FixtureDef<T, D, S>,
+        fixture_def: FixtureDef<T, D>,
     ) -> BodyId {
         unsafe {
             let world_ptr = self.0.as_mut() as *mut WorldInner<T, D>;
@@ -234,14 +234,9 @@ impl<T: Real, D> World<T, D> {
         }
     }
 
-    pub fn create_body_with_fixtures<S, IT>(
-        &mut self,
-        def: BodyDef<T, D>,
-        fixtures_def: IT,
-    ) -> BodyId
+    pub fn create_body_with_fixtures<IT>(&mut self, def: BodyDef<T, D>, fixtures_def: IT) -> BodyId
     where
-        S: Shape<T> + 'static,
-        IT: IntoIterator<Item = FixtureDef<T, D, S>>,
+        IT: IntoIterator<Item = FixtureDef<T, D>>,
     {
         unsafe {
             let world_ptr = self.0.as_mut() as *mut WorldInner<T, D>;
@@ -777,7 +772,7 @@ impl<T: Real, D> World<T, D> {
 
         if self.0.continuous_physics && step.dt > T::zero() {
             let timer = Timer::new();
-//            self.solve_toi(&step);
+            self.solve_toi(&step);
             self.0.profile.solve_toi = timer.get_duration();
         }
 

@@ -3,7 +3,7 @@ use std::any::{Any, TypeId};
 use std::collections::HashMap;
 use std::time::Duration;
 
-#[derive(Debug, Eq, PartialEq, Copy, Clone)]
+#[derive(Debug, Eq, PartialEq, Copy, Clone, Hash, Ord, PartialOrd)]
 pub struct EntityId(usize);
 
 #[derive(Default)]
@@ -34,11 +34,16 @@ struct Entity {
 }
 
 pub struct EntityRef<'a> {
+    id: EntityId,
     components_registry: &'a ComponentRegistry,
     entity: &'a Entity,
 }
 
 impl<'a> EntityRef<'a> {
+    pub fn id(&self) -> EntityId {
+        self.id
+    }
+
     pub fn contains<C: Component>(&self) -> bool {
         let entity = &self.entity;
         match self
@@ -72,6 +77,10 @@ pub struct EntityMut<'a> {
 }
 
 impl<'a> EntityMut<'a> {
+    pub fn id(&self) -> EntityId {
+        self.id
+    }
+
     pub fn contains<C: Component>(&self) -> bool {
         let entity = &self.entity;
         match self
@@ -178,7 +187,7 @@ impl ECS {
         }
     }
 
-    pub fn create_entity(&mut self) -> EntityBuilder<'_> {
+    pub fn create_entity(&mut self) -> EntityBuilder {
         EntityBuilder {
             ecs_inner: &mut self.inner,
             entity: Entity {
@@ -192,15 +201,28 @@ impl ECS {
         self.inner.events.push(Event::RemoveEntity(id));
     }
 
-    pub fn entity(&self, id: EntityId) -> Option<EntityRef<'_>> {
+    pub fn entity(&self, id: EntityId) -> Option<EntityRef> {
         let components_registry = &self.inner.components_registry;
         self.inner.entities.get(id.0).map(|entity| EntityRef {
+            id,
             components_registry,
             entity,
         })
     }
 
-    pub fn entity_mut(&mut self, id: EntityId) -> Option<EntityMut<'_>> {
+    pub fn entities(&self) -> impl Iterator<Item = EntityRef> {
+        let components_registry = &self.inner.components_registry;
+        self.inner
+            .entities
+            .iter()
+            .map(move |(id, entity)| EntityRef {
+                id: EntityId(id),
+                components_registry,
+                entity,
+            })
+    }
+
+    pub fn entity_mut(&mut self, id: EntityId) -> Option<EntityMut> {
         let events = &mut self.inner.events;
         let components_registry = &mut self.inner.components_registry;
         self.inner

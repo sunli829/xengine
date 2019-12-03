@@ -272,8 +272,8 @@ impl Real for FP {
         let index_error = raw_index - rounded_index;
 
         let nearest_value = FP(TAN_LUT[rounded_index.to_i32() as usize]);
-        let second_nearest_value = FP(TAN_LUT
-            [(rounded_index + FP::i32(index_error.signum().to_i32())).to_i32() as usize]);
+        let second_nearest_value =
+            FP(TAN_LUT[(rounded_index + FP::i32(index_error.signum().to_i32())).to_i32() as usize]);
 
         let delta = (index_error * (nearest_value - second_nearest_value).abs()).0;
         let interpolated_value = nearest_value.0 + delta;
@@ -566,13 +566,13 @@ impl RemAssign for FP {
 }
 
 impl Display for FP {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         write!(f, "{}", self.to_f32())
     }
 }
 
 impl Debug for FP {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         Display::fmt(self, f)
     }
 }

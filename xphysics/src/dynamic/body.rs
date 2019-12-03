@@ -196,6 +196,9 @@ impl<T: Real, D> Body<T, D> {
         if self.type_ == BodyType::Static {
             return;
         }
+        if self.linear_velocity_ == v {
+            return;
+        }
         if v.dot(v) > T::zero() {
             self.set_awake(true);
         }
@@ -208,6 +211,9 @@ impl<T: Real, D> Body<T, D> {
 
     pub fn set_angular_velocity(&mut self, w: T) {
         if self.type_ == BodyType::Static {
+            return;
+        }
+        if self.angular_velocity_ == w {
             return;
         }
         if w * w > T::zero() {
@@ -456,6 +462,10 @@ impl<T: Real, D> Body<T, D> {
     }
 
     pub fn set_awake(&mut self, flag: bool) {
+        if self.flags.contains(BodyFlags::AWAKE) == flag {
+            return;
+        }
+
         if flag {
             self.flags.insert(BodyFlags::AWAKE);
             self.sleep_time = T::zero();
@@ -477,6 +487,38 @@ impl<T: Real, D> Body<T, D> {
         self.flags.contains(BodyFlags::ACTIVE)
     }
 
+    pub fn set_active(&mut self, flag: bool) {
+        unsafe {
+            if flag == self.is_active() {
+                return;
+            }
+
+            if flag {
+                self.flags.insert(BodyFlags::ACTIVE);
+                let broad_phase = &mut (*self.world_ptr).contact_manager.broad_phase;
+                for (_, f) in &mut self.fixture_list {
+                    f.create_proxies(broad_phase, self.xf);
+                }
+            } else {
+                self.flags.remove(BodyFlags::ACTIVE);
+                let broad_phase = &mut (*self.world_ptr).contact_manager.broad_phase;
+                for (_, f) in &mut self.fixture_list {
+                    f.destroy_proxies(broad_phase);
+                }
+
+                let mut ce = self.contact_list_ptr;
+                while !ce.is_null() {
+                    let ce0 = ce;
+                    ce = (*ce).next_ptr;
+                    (*self.world_ptr)
+                        .contact_manager
+                        .destroy((*ce0).contact_ptr);
+                }
+                self.contact_list_ptr = std::ptr::null_mut();
+            }
+        }
+    }
+
     pub fn set_fixed_rotation(&mut self, flag: bool) {
         self.flags.set(BodyFlags::FIXED_ROTATION, flag);
     }
@@ -486,6 +528,10 @@ impl<T: Real, D> Body<T, D> {
     }
 
     pub fn set_sleeping_allowed(&mut self, flag: bool) {
+        if self.flags.contains(BodyFlags::AUTO_SLEEP) == flag {
+            return;
+        }
+
         if flag {
             self.flags.insert(BodyFlags::AUTO_SLEEP);
         } else {
@@ -502,7 +548,7 @@ impl<T: Real, D> Body<T, D> {
         &self.fixture_list
     }
 
-    pub fn fixture_list_mut(&mut self) -> &[(FixtureId, Box<Fixture<T, D>>)] {
+    pub fn fixture_list_mut(&mut self) -> &mut [(FixtureId, Box<Fixture<T, D>>)] {
         &mut self.fixture_list
     }
 
@@ -589,16 +635,15 @@ impl<T: Real, D> Body<T, D> {
         self.data = Some(data);
     }
 
-    pub fn create_fixture<S: Shape<T> + 'static>(&mut self, def: FixtureDef<T, D, S>) -> FixtureId {
+    pub fn create_fixture(&mut self, def: FixtureDef<T, D>) -> FixtureId {
         unsafe {
-            let shape = Box::new(def.shape);
-            let child_count = shape.child_count();
+            let child_count = def.shape.child_count();
             let fixture_id = FixtureId(self.fixture_inc_id);
             self.fixture_inc_id += 1;
             let fixture = Box::new(Fixture {
                 density: def.density,
                 body_ptr: self as *mut Body<T, D>,
-                shape,
+                shape: def.shape,
                 friction: def.friction,
                 restitution: def.restitution,
                 proxies: Vec::with_capacity(child_count),
@@ -622,11 +667,7 @@ impl<T: Real, D> Body<T, D> {
         }
     }
 
-    pub fn create_fixture_with_shape<S: Shape<T> + 'static>(
-        &mut self,
-        shape: S,
-        density: T,
-    ) -> FixtureId {
+    pub fn create_fixture_with_shape(&mut self, shape: Box<dyn Shape<T>>, density: T) -> FixtureId {
         self.create_fixture(FixtureDef::new(shape, density))
     }
 

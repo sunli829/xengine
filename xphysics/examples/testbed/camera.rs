@@ -1,4 +1,4 @@
-use xmath::{AffineTransform, Real, Vector2};
+use xmath::Vector2;
 
 const WORLD_WIDTH: f32 = 60.0;
 const WORLD_HEIGHT: f32 = 50.0;
@@ -37,9 +37,5 @@ impl Camera {
     pub fn transform_height(&self, height: f32) -> f32 {
         let ry = self.window_size.y / WORLD_HEIGHT * self.zoom;
         height * ry
-    }
-
-    pub fn transform_size(&self, size: Vector2<f32>) -> Vector2<f32> {
-        (self.transform_width(size.x), self.transform_height(size.y)).into()
     }
 }

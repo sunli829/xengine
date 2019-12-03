@@ -3,9 +3,9 @@ extern crate bitflags;
 
 mod collision;
 mod dynamic;
+mod math;
 mod settings;
 mod timer;
-mod math;
 
 pub use collision::*;
 pub use dynamic::*;
@@ -22,7 +22,10 @@ mod tests {
             ..BodyDef::default()
         });
         let body = world.body_mut(id).unwrap();
-        body.create_fixture(FixtureDef::new(ShapeCircle::new(position, 50.0), 1.0));
+        body.create_fixture(FixtureDef::new(
+            ShapeCircle::new(position, 50.0).into_boxed(),
+            1.0,
+        ));
         id
     }
 

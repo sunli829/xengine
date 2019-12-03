@@ -1,7 +1,8 @@
 use crate::test::TestImpl;
 use xmath::{Real, Vector2};
 use xphysics::{
-    BodyDef, BodyId, BodyType, FixtureDef, ShapeChain, ShapeCircle, ShapeEdge, ShapePolygon, World,
+    BodyDef, BodyId, BodyType, FixtureDef, IntoBoxedShape, ShapeChain, ShapeCircle, ShapeEdge,
+    ShapePolygon, World,
 };
 
 pub struct CharacterCollision {
@@ -11,13 +12,14 @@ pub struct CharacterCollision {
 impl<T: Real> TestImpl<T> for CharacterCollision {
     fn new(world: &mut World<T, ()>) -> CharacterCollision {
         // Ground body
-        let id = world.create_body_with_fixture(
+        world.create_body_with_fixture(
             BodyDef::default(),
             FixtureDef::new(
                 ShapeEdge::new(
                     Vector2::new(T::f32(-20.0), T::f32(0.0)),
                     Vector2::new(T::f32(20.0), T::f32(0.0)),
-                ),
+                )
+                .into_boxed(),
                 T::zero(),
             ),
         );
@@ -29,15 +31,18 @@ impl<T: Real> TestImpl<T> for CharacterCollision {
             BodyDef::default(),
             vec![
                 FixtureDef::new(
-                    ShapeEdge::new((T::f32(-8.0), T::f32(1.0)), (T::f32(-6.0), T::f32(1.0))),
+                    ShapeEdge::new((T::f32(-8.0), T::f32(1.0)), (T::f32(-6.0), T::f32(1.0)))
+                        .into_boxed(),
                     T::f32(0.0),
                 ),
                 FixtureDef::new(
-                    ShapeEdge::new((T::f32(-6.0), T::f32(1.0)), (T::f32(-4.0), T::f32(1.0))),
+                    ShapeEdge::new((T::f32(-6.0), T::f32(1.0)), (T::f32(-4.0), T::f32(1.0)))
+                        .into_boxed(),
                     T::f32(0.0),
                 ),
                 FixtureDef::new(
-                    ShapeEdge::new((T::f32(-4.0), T::f32(1.0)), (T::f32(-2.0), T::f32(1.0))),
+                    ShapeEdge::new((T::f32(-4.0), T::f32(1.0)), (T::f32(-2.0), T::f32(1.0)))
+                        .into_boxed(),
                     T::f32(0.0),
                 ),
             ],
@@ -55,7 +60,8 @@ impl<T: Real> TestImpl<T> for CharacterCollision {
                     (T::f32(6.0), T::f32(8.0)),
                     (T::f32(7.0), T::f32(8.0)),
                     (T::f32(8.0), T::f32(7.0)),
-                ]),
+                ])
+                .into_boxed(),
                 T::zero(),
             ),
         );
@@ -72,7 +78,8 @@ impl<T: Real> TestImpl<T> for CharacterCollision {
                         T::f32(1.0),
                         (T::f32(4.0), T::f32(3.0)),
                         T::f32(0.0),
-                    ),
+                    )
+                    .into_boxed(),
                     T::zero(),
                 ),
                 FixtureDef::new(
@@ -81,7 +88,8 @@ impl<T: Real> TestImpl<T> for CharacterCollision {
                         T::f32(1.0),
                         (T::f32(6.0), T::f32(3.0)),
                         T::f32(0.0),
-                    ),
+                    )
+                    .into_boxed(),
                     T::zero(),
                 ),
                 FixtureDef::new(
@@ -90,7 +98,8 @@ impl<T: Real> TestImpl<T> for CharacterCollision {
                         T::f32(1.0),
                         (T::f32(8.0), T::f32(3.0)),
                         T::f32(0.0),
-                    ),
+                    )
+                    .into_boxed(),
                     T::zero(),
                 ),
             ],
@@ -105,7 +114,8 @@ impl<T: Real> TestImpl<T> for CharacterCollision {
                     (T::f32(1.0), T::f32(3.0)),
                     (T::f32(1.0), T::f32(5.0)),
                     (T::f32(-1.0), T::f32(5.0)),
-                ]),
+                ])
+                .into_boxed(),
                 T::f32(0.0),
             ),
         );
@@ -129,13 +139,14 @@ impl<T: Real> TestImpl<T> for CharacterCollision {
                     (T::f32(-6.0), T::f32(3.0)),
                     (T::f32(-6.0), T::f32(2.0)),
                     (T::f32(-6.0), T::f32(0.0)),
-                ]),
+                ])
+                .into_boxed(),
                 T::f32(0.0),
             ),
         );
 
         // Square character 1
-        let id = world.create_body_with_fixture(
+        world.create_body_with_fixture(
             BodyDef {
                 position: (T::f32(-3.0), T::f32(8.0)).into(),
                 type_: BodyType::Dynamic,
@@ -144,7 +155,7 @@ impl<T: Real> TestImpl<T> for CharacterCollision {
                 ..BodyDef::default()
             },
             FixtureDef::new(
-                ShapePolygon::new_box_center(T::f32(0.5), T::f32(0.5)),
+                ShapePolygon::new_box_center(T::f32(0.5), T::f32(0.5)).into_boxed(),
                 T::f32(20.0),
             ),
         );
@@ -159,7 +170,7 @@ impl<T: Real> TestImpl<T> for CharacterCollision {
                 ..BodyDef::default()
             },
             FixtureDef::new(
-                ShapePolygon::new_box_center(T::f32(0.25), T::f32(0.25)),
+                ShapePolygon::new_box_center(T::f32(0.25), T::f32(0.25)).into_boxed(),
                 T::f32(20.0),
             ),
         );
@@ -183,7 +194,8 @@ impl<T: Real> TestImpl<T> for CharacterCollision {
                         angle += delta;
                     }
                     vertices
-                }),
+                })
+                .into_boxed(),
                 T::f32(20.0),
             ),
         );
@@ -197,7 +209,10 @@ impl<T: Real> TestImpl<T> for CharacterCollision {
                 allow_sleep: false,
                 ..BodyDef::default()
             },
-            FixtureDef::new(ShapeCircle::new_with_radius(T::f32(0.5)), T::f32(20.0)),
+            FixtureDef::new(
+                ShapeCircle::new_with_radius(T::f32(0.5)).into_boxed(),
+                T::f32(20.0),
+            ),
         );
 
         // Circle character
@@ -210,7 +225,10 @@ impl<T: Real> TestImpl<T> for CharacterCollision {
             },
             FixtureDef {
                 friction: T::f32(1.0),
-                ..FixtureDef::new(ShapeCircle::new_with_radius(T::f32(0.25)), T::f32(20.0))
+                ..FixtureDef::new(
+                    ShapeCircle::new_with_radius(T::f32(0.25)).into_boxed(),
+                    T::f32(20.0),
+                )
             },
         );
 

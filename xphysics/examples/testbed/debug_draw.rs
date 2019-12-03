@@ -1,8 +1,7 @@
 use crate::camera::Camera;
 use std::cell::RefCell;
 use std::rc::Rc;
-use xmath::{DotTrait, Multiply, Transform, Vector2};
-use xphysics::Color;
+use xmath::{Transform, Vector2};
 
 fn to_nvg_color(color: xphysics::Color) -> nvg::Color {
     nvg::Color {
@@ -39,11 +38,6 @@ impl NvgDebugDraw {
 
     pub fn transform_height(&self, height: f32) -> f32 {
         self.camera.borrow().transform_height(height)
-    }
-
-    pub fn transform_size(&self, size: Vector2<f32>) -> Vector2<f32> {
-        let Vector2 { x, y } = self.camera.borrow().transform_size(size);
-        (x, y).into()
     }
 }
 
@@ -135,15 +129,14 @@ impl xphysics::DebugDraw for NvgDebugDraw {
         let p2 = p1 + xf.q.x_axis() * axis_scale;
         ctx.line_to(self.transform_pt(p2));
         ctx.stroke_paint(red);
-        ctx.stroke();
+        ctx.stroke().unwrap();
 
         ctx.begin_path();
         ctx.move_to(self.transform_pt(p1));
-        let ya = xf.q.y_axis();
         let p2 = p1 + xf.q.y_axis() * axis_scale;
         ctx.line_to(self.transform_pt(p2));
         ctx.stroke_paint(green);
-        ctx.stroke();
+        ctx.stroke().unwrap();
     }
 
     fn draw_point(&mut self, p: &Vector2<f32>, color: xphysics::Color) {

@@ -41,3 +41,13 @@ pub trait Shape<T: Real> {
 
     fn distance_proxy(&self, index: usize) -> DistanceProxy<'_, T>;
 }
+
+pub trait IntoBoxedShape<T: Real>: Shape<T> {
+    fn into_boxed(self) -> Box<dyn Shape<T>>;
+}
+
+impl<T: Real, S: Shape<T> + Sized + 'static> IntoBoxedShape<T> for S {
+    fn into_boxed(self) -> Box<dyn Shape<T>> {
+        Box::new(self)
+    }
+}

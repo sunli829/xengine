@@ -1,7 +1,7 @@
 use crate::{Body, BroadPhase, MassData, RayCastInput, RayCastOutput, Shape};
 use xmath::{Real, Transform, Vector2, AABB};
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Eq, PartialEq)]
 pub struct Filter {
     pub category_bits: u16,
     pub mask_bits: u16,
@@ -18,8 +18,8 @@ impl Default for Filter {
     }
 }
 
-pub struct FixtureDef<T, D, S> {
-    pub shape: S,
+pub struct FixtureDef<T, D> {
+    pub shape: Box<dyn Shape<T>>,
     pub data: Option<D>,
     pub friction: T,
     pub restitution: T,
@@ -28,8 +28,8 @@ pub struct FixtureDef<T, D, S> {
     pub filter: Filter,
 }
 
-impl<T: Real, D, S: Shape<T> + 'static> FixtureDef<T, D, S> {
-    pub fn new(shape: S, density: T) -> Self {
+impl<T: Real, D> FixtureDef<T, D> {
+    pub fn new(shape: Box<dyn Shape<T>>, density: T) -> Self {
         Self {
             shape,
             data: None,
@@ -86,8 +86,10 @@ impl<T: Real, D> Fixture<T, D> {
     }
 
     pub fn set_filter(&mut self, filter: Filter) {
-        self.filter = filter;
-        self.re_filter();
+        if self.filter != filter {
+            self.filter = filter;
+            self.re_filter();
+        }
     }
 
     fn re_filter(&mut self) {

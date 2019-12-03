@@ -2,7 +2,7 @@ use crate::real::Real;
 use crate::{CrossTrait, DotTrait};
 use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
-#[derive(Debug, Copy, Clone, Default, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, Default, PartialEq, Eq, Hash)]
 pub struct Vector2<T> {
     pub x: T,
     pub y: T,
